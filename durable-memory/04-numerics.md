@@ -15,7 +15,7 @@ Measured on Linux x86-64 (errors are what the test programs assert, with margin)
 | slider-crank (3 revolute-like joints + guide) | `trapezoidal` | slider x within 2e-5 of closed form, motor angle lags 3.5e-4 (redundant constraints) |
 | block on 30 degree incline | NSC and SMC | a = g (sin - mu cos) to 1e-4 relative; sticks when tan > mu |
 | sphere rolling down 0.3 rad incline, psor 300 | NSC | a = 5/7 g sin to 1e-5 relative, v = w r |
-| cylinder rolling down the same incline | NSC | a = 2/3 g sin within 2.2 % (Bullet cylinder-box contact; asserted to 4 %) |
+| cylinder rolling down the same incline | NSC | a = 2/3 g sin within -2.2 % (x86-64) / +6.5 % (macOS arm64): Bullet cylinder-box contact; asserted to 10 % |
 
 ## Integrator choices
 
