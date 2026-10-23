@@ -36,6 +36,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 set(CH_COMPILER "COMPILER_GCC_X64")
 add_subdirectory("${CHRONO_SRC}/src/chrono" chrono-core EXCLUDE_FROM_ALL)
+# Chrono's TCP socket helpers are never used by the host and do not compile with MinGW
+# (ChSocket.cpp: "size of array 'msgLength' is not an integral constant-expression"): drop them.
+get_target_property(CHRONO_SOURCES ChronoEngine SOURCES)
+list(FILTER CHRONO_SOURCES EXCLUDE REGEX "utils/ChSocket")
+set_property(TARGET ChronoEngine PROPERTY SOURCES ${CHRONO_SOURCES})
 
 add_library(lmphysics_chrono INTERFACE)
 target_link_libraries(lmphysics_chrono INTERFACE ChronoEngine)

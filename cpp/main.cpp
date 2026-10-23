@@ -223,15 +223,26 @@ void need_not_started(SysObj &s, const char *who) {
 double body_value_of(const BodyObj &bo, const std::string &c) {
   auto &b = *bo.b;
   ch::ChVector3d p = b.GetPos(), v = b.GetPosDt(), w = b.GetAngVelParent();
-  if (c == "x") return p.x(); if (c == "y") return p.y(); if (c == "z") return p.z();
-  if (c == "vx") return v.x(); if (c == "vy") return v.y(); if (c == "vz") return v.z();
-  if (c == "wx") return w.x(); if (c == "wy") return w.y(); if (c == "wz") return w.z();
+  if (c == "x") return p.x();
+  if (c == "y") return p.y();
+  if (c == "z") return p.z();
+  if (c == "vx") return v.x();
+  if (c == "vy") return v.y();
+  if (c == "vz") return v.z();
+  if (c == "wx") return w.x();
+  if (c == "wy") return w.y();
+  if (c == "wz") return w.z();
   ch::ChQuaterniond q = b.GetRot();
-  if (c == "qw") return q.e0(); if (c == "qx") return q.e1(); if (c == "qy") return q.e2(); if (c == "qz") return q.e3();
+  if (c == "qw") return q.e0();
+  if (c == "qx") return q.e1();
+  if (c == "qy") return q.e2();
+  if (c == "qz") return q.e3();
   if (c == "speed") return v.Length();
   ch::ChVector3d wl = b.GetAngVelLocal();
   ch::ChVector3d Lw = b.GetRotMat() * (b.GetInertia() * wl);
-  if (c == "lx") return Lw.x(); if (c == "ly") return Lw.y(); if (c == "lz") return Lw.z();
+  if (c == "lx") return Lw.x();
+  if (c == "ly") return Lw.y();
+  if (c == "lz") return Lw.z();
   if (c == "ke") return 0.5 * b.GetMass() * v.Length2() + 0.5 * wl.Dot(b.GetInertia() * wl);
   throw dslvm::Error("record: unknown body column '" + c + "' (x y z vx vy vz wx wy wz qw qx qy qz speed lx ly lz ke)");
 }
