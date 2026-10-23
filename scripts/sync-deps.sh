@@ -3,8 +3,6 @@
 # --verify only checks that each checkout is at its pin. Extra words after the commit are sparse-checkout paths
 # (a partial clone then downloads only those blobs: Chrono ships ~1 GB of sample data we never read).
 set -eu
-# git-bash on Windows would rewrite the leading "/" of sparse-checkout patterns into a Windows path
-export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 while read -r name repo commit paths; do
   case "$name" in ''|\#*) continue;; esac
@@ -17,9 +15,10 @@ while read -r name repo commit paths; do
   fi
   if [ ! -d "$dir/.git" ]; then mkdir -p "$dir"; git -C "$dir" init -q; git -C "$dir" remote add origin "$repo"; fi
   if [ -n "$paths" ]; then
-    git -C "$dir" sparse-checkout init --no-cone
+    # git-bash on Windows would rewrite the leading "/" of the patterns into a Windows path: no conversion
+    # for this one command, which therefore runs inside $dir instead of using git -C.
     # shellcheck disable=SC2086
-    git -C "$dir" sparse-checkout set $paths
+    ( cd "$dir" && git sparse-checkout init --no-cone && MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*" git sparse-checkout set $paths )
     git -C "$dir" fetch -q --depth 1 --filter=blob:none origin "$commit"
   else
     git -C "$dir" fetch -q --depth 1 origin "$commit"
