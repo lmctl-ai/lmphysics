@@ -1,0 +1,18 @@
+# A 60 degree pendulum released from rest, recorded every 5 ms. The pin is a revolute joint, the
+# integrator is trapezoidal; total energy must stay constant and the reaction at the pin is logged.
+out = ARGV.len() > 0 ? ARGV[0] : "build/pendulum.dslb";
+mkdir("build/examples");
+p = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s = phys.system("nsc");
+s.integrator("hht").timestep(0.0005);
+let pin = s.ground("pin");
+let bob = s.sphere("bob", 0.05, 2000.0).pos(sin(1.0471975511965976), 0.0, 0.0 - cos(1.0471975511965976));
+let hinge = s.revolute("hinge", pin, bob, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+s.record("bob", "x,z,vx,vz").record("hinge", "angle,fx,fz");
+let e0 = s.energy();
+s.run(5.0);
+phys.assert_close(s.energy() / e0, 1.0, 0.0001);
+phys.assert_close(bob.x() * bob.x() + bob.z() * bob.z(), 1.0, 0.001);
+s.save_csv("build/examples/pendulum.csv");
+end _dsl_
+savedsl(p, out);

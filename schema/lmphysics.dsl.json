@@ -1,0 +1,559 @@
+{
+  "dsl.schema": 2,
+  "name": "lmphysics",
+  "types": {
+    "Phys": {
+      "methods": {
+        "system": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "System"
+          }
+        ],
+        "assert_close": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "void"
+          }
+        ],
+        "print": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "void"
+          }
+        ],
+        "version": [
+          {
+            "params": [],
+            "returns": "string"
+          }
+        ]
+      }
+    },
+    "System": {
+      "methods": {
+        "gravity": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
+        "timestep": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
+        "solver": [
+          {
+            "params": [
+              "string",
+              "int"
+            ],
+            "returns": "System"
+          }
+        ],
+        "integrator": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "System"
+          }
+        ],
+        "bounce_speed": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
+        "newton": [
+          {
+            "params": [
+              "int",
+              "float",
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
+        "hht_alpha": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
+        "material": [
+          {
+            "params": [
+              "string",
+              "float",
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
+        "stiffness": [
+          {
+            "params": [
+              "string",
+              "float",
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
+        "ground": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "box": [
+          {
+            "params": [
+              "string",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "sphere": [
+          {
+            "params": [
+              "string",
+              "float",
+              "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "cylinder": [
+          {
+            "params": [
+              "string",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "floor": [
+          {
+            "params": [
+              "string",
+              "string"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "revolute": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "prismatic": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "lock": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "spherical": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "distance": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "spring": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "motor_speed": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "string"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "motor_angle": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "string"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "record": [
+          {
+            "params": [
+              "string",
+              "string"
+            ],
+            "returns": "System"
+          }
+        ],
+        "step": [
+          {
+            "params": [],
+            "returns": "System"
+          }
+        ],
+        "run": [
+          {
+            "params": [
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
+        "time": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "energy": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "contacts": [
+          {
+            "params": [],
+            "returns": "int"
+          }
+        ],
+        "save_csv": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "System"
+          }
+        ]
+      }
+    },
+    "Body": {
+      "methods": {
+        "pos": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "vel": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "rot_axis": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "omega": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "fixed": [
+          {
+            "params": [
+              "bool"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "mass_props": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "collide": [
+          {
+            "params": [
+              "string"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "mass": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "x": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "y": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "z": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "vx": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "vy": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "vz": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "wx": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "wy": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "wz": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "lx": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "ly": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "lz": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "speed": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "ke": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ]
+      }
+    },
+    "Joint": {
+      "methods": {
+        "reaction_x": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "reaction_y": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "reaction_z": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "angle": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "length": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "force": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "torque": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ]
+      }
+    }
+  },
+  "functions": {},
+  "context": {
+    "phys": "Phys"
+  }
+}

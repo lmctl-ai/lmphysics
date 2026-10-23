@@ -1,0 +1,91 @@
+# Joints: pendulum periods against the elliptic-integral solution, reactions, rigid links, slider.
+out = ARGV.len() > 0 ? ARGV[0] : "build/joints.dslb";
+p = _dsl_ cli="lmphysics";
+# A bob (radius 1 cm) on a revolute pin at the origin, released at angle th0 from hanging. The time to
+# cross the vertical is T/4 = K(sin(th0/2)) / w0 with w0^2 = g L / (L^2 + 2/5 r^2) and K from the AGM.
+let g = phys.system("nsc");
+g.integrator("hht").timestep(0.0005);
+let pin_g = g.ground("pin");
+let bob = g.sphere("bob", 0.01, 1000.0).pos(sin(2.0), 0.0, 0.0 - cos(2.0));
+g.revolute("hinge", pin_g, bob, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+let tprev = 0.0;
+let xprev = bob.x();
+let tq = 0.0;
+let done = false;
+while (!done) {
+  g.step();
+  if (bob.x() <= 0.0) { tq = tprev + (g.time() - tprev) * xprev / (xprev - bob.x()); done = true; }
+  tprev = g.time();
+  xprev = bob.x();
+}
+let am = 1.0;
+let bm = cos(1.0);
+let k = 0;
+while (k < 30) { let an = (am + bm) / 2.0; bm = sqrt(am * bm); am = an; k = k + 1; }
+let w0 = sqrt(9.81 / (1.0 + 0.4 * 0.0001));
+phys.assert_close(tq, 3.141592653589793 / (2.0 * am) / w0, 0.0015);      # large amplitude: 115 degrees
+phys.assert_close(bob.x() * bob.x() + bob.z() * bob.z(), 1.0, 0.001);     # the pin holds the radius
+# Small amplitude (0.05 rad): T = 2 pi sqrt(I / m g L).
+let s = phys.system("nsc");
+s.integrator("hht").timestep(0.0005);
+let pin_s = s.ground("pin");
+let bob_s = s.sphere("bob", 0.01, 1000.0).pos(sin(0.05), 0.0, 0.0 - cos(0.05));
+let hinge_s = s.revolute("hinge", pin_s, bob_s, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+let tp_s = 0.0;
+let xp_s = bob_s.x();
+let tq_s = 0.0;
+let done_s = false;
+while (!done_s) {
+  s.step();
+  if (bob_s.x() <= 0.0) { tq_s = tp_s + (s.time() - tp_s) * xp_s / (xp_s - bob_s.x()); done_s = true; }
+  tp_s = s.time();
+  xp_s = bob_s.x();
+}
+phys.assert_close(4.0 * tq_s, 2.0 * 3.141592653589793 * sqrt((1.0 + 0.4 * 0.0001) / 9.81), 0.0015);
+phys.assert_close(hinge_s.angle(), 0.05, 0.0005);                      # turned from -0.05 rad to the vertical
+# A box hanging from a lock joint: the reaction on it balances its weight and it does not move.
+let l = phys.system("nsc");
+l.timestep(0.001);
+let ceiling = l.ground("ceiling");
+let load = l.box("load", 0.2, 0.2, 0.2, 1000.0).pos(0.0, 0.0, -1.0);
+let hold = l.lock("hold", ceiling, load, 0.0, 0.0, 0.0);
+l.run(1.0);
+phys.assert_close(hold.reaction_z(), load.mass() * 9.81, 0.0001);
+phys.assert_close(hold.reaction_x(), 0.0, 0.0001);
+phys.assert_close(load.z(), -1.0, 0.0000001);
+# Prismatic joint along z: free fall of the slider, no lateral motion.
+let q = phys.system("nsc");
+q.integrator("trapezoidal").timestep(0.001);
+let rail = q.ground("rail");
+let slider = q.box("slider", 0.2, 0.2, 0.2, 1000.0);
+q.prismatic("slide", rail, slider, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+slider.vel(1.0, 0.0, 0.0);
+q.run(1.0);
+phys.assert_close(slider.z(), 0.0 - 9.81 / 2.0, 0.0001);
+phys.assert_close(slider.x(), 0.0, 0.0001);
+# Distance constraint and spherical joint keep a swinging mass on its sphere.
+let r = phys.system("nsc");
+r.integrator("hht").timestep(0.001);
+let anchor = r.ground("anchor");
+let weight = r.sphere("weight", 0.05, 1000.0).pos(1.0, 0.0, 0.0);
+let rod = r.distance("rod", anchor, weight, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+r.run(1.0);
+phys.assert_close(rod.length(), 1.0, 0.00001);
+let r2 = phys.system("nsc");
+r2.integrator("hht").timestep(0.001);
+let anchor2 = r2.ground("anchor");
+let weight2 = r2.sphere("weight", 0.05, 1000.0).pos(0.0, 1.0, 0.0);
+r2.spherical("ball", anchor2, weight2, 0.0, 0.0, 0.0);
+r2.run(1.0);
+phys.assert_close(weight2.x() * weight2.x() + weight2.y() * weight2.y() + weight2.z() * weight2.z(), 1.0, 0.00001);
+# Hanging reaction force of a rigid pendulum bob at rest below the pin: m g.
+let h = phys.system("nsc");
+h.timestep(0.001);
+let anchor3 = h.ground("anchor");
+let still = h.sphere("still", 0.05, 1000.0).pos(0.0, 0.0, -1.0);
+let pin3 = h.revolute("pin", anchor3, still, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+h.run(0.5);
+phys.assert_close(pin3.reaction_z(), still.mass() * 9.81, 0.0001);
+phys.assert_close(still.z(), -1.0, 0.0000001);
+end _dsl_
+savedsl(p, out);

@@ -1,0 +1,24 @@
+# Two identical blocks on a 30 degree ramp, friction 0.3 and 0.7. tan(30) = 0.577: the first slides with
+# a = g (sin - mu cos), the second sticks. The same experiment runs with the penalty (SMC) formulation.
+out = ARGV.len() > 0 ? ARGV[0] : "build/incline.dslb";
+mkdir("build/examples");
+p = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let th = 0.5235987755982988;
+let slide = phys.system("nsc");
+slide.material("m", 0.3, 0.0).timestep(0.001);
+slide.box("ramp", 40.0, 4.0, 0.5, 1000.0).rot_axis(0.0, 1.0, 0.0, th).fixed(true).collide("m");
+let a = slide.box("a", 0.4, 0.4, 0.4, 500.0).pos(0.45 * sin(th), 0.0, 0.45 * cos(th)).rot_axis(0.0, 1.0, 0.0, th).collide("m");
+slide.record("a", "x,z,vx,vz");
+slide.run(1.5);
+phys.assert_close(a.vx() * cos(th) - a.vz() * sin(th), 9.81 * (sin(th) - 0.3 * cos(th)) * 1.5, 0.03);
+slide.save_csv("build/examples/incline_slides.csv");
+let stick = phys.system("smc");
+stick.material("m", 0.7, 0.0).timestep(0.001);
+stick.box("ramp", 40.0, 4.0, 0.5, 1000.0).rot_axis(0.0, 1.0, 0.0, th).fixed(true).collide("m");
+let b = stick.box("b", 0.4, 0.4, 0.4, 500.0).pos(0.45 * sin(th), 0.0, 0.45 * cos(th)).rot_axis(0.0, 1.0, 0.0, th).collide("m");
+stick.record("b", "x,z,speed");
+stick.run(1.5);
+phys.assert_close(b.speed(), 0.0, 0.05);
+stick.save_csv("build/examples/incline_sticks.csv");
+end _dsl_
+savedsl(p, out);

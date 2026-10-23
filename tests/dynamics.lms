@@ -1,0 +1,91 @@
+# Closed-form checks without contact: free fall, projectile, spring-mass-damper, energy, motors, torque-free rotation.
+out = ARGV.len() > 0 ? ARGV[0] : "build/dynamics.dslb";
+p = _dsl_ cli="lmphysics";
+# Free fall z = z0 - g t^2/2. Trapezoidal is exact for a constant acceleration; implicit Euler lags by g*dt*t/2.
+let a = phys.system("nsc");
+a.integrator("trapezoidal").timestep(0.001);
+let ball = a.sphere("ball", 0.1, 1000.0).pos(0.0, 0.0, 10.0);
+a.run(1.0);
+phys.assert_close(a.time(), 1.0, 0.0000001);
+phys.assert_close(ball.z(), 10.0 - 9.81 / 2.0, 0.000001);
+phys.assert_close(ball.vz(), -9.81, 0.000001);
+let e = phys.system("nsc");
+e.timestep(0.001);
+let ball_e = e.sphere("ball", 0.1, 1000.0).pos(0.0, 0.0, 10.0);
+e.run(1.0);
+phys.assert_close(ball_e.z(), 10.0 - 9.81 / 2.0, 0.006);       # first-order scheme, error g*dt*t/2 = 4.9e-3
+phys.assert_close(ball_e.vz(), -9.81, 0.000001);
+# Mass of primitives: sphere 4/3 pi r^3 rho, box, cylinder pi r^2 h rho.
+phys.assert_close(ball.mass(), 1000.0 * 4.0 / 3.0 * 3.141592653589793 * 0.001, 0.000001);
+let m = phys.system("nsc");
+phys.assert_close(m.box("b", 1.0, 2.0, 3.0, 10.0).mass(), 60.0, 0.0000001);
+phys.assert_close(m.cylinder("c", 0.5, 2.0, 100.0).mass(), 100.0 * 3.141592653589793 * 0.25 * 2.0, 0.000001);
+# Projectile from the origin with v = (10, 0, 10): lands at x = 2 vx vz / g.
+let pr = phys.system("nsc");
+pr.integrator("trapezoidal").timestep(0.001);
+let shot = pr.sphere("shot", 0.05, 1000.0).vel(10.0, 0.0, 10.0);
+pr.run(2.0 * 10.0 / 9.81);
+phys.assert_close(shot.x(), 10.0 * pr.time(), 0.000001);
+phys.assert_close(shot.z(), 10.0 * pr.time() - 9.81 / 2.0 * pr.time() * pr.time(), 0.000001);
+phys.assert_close(shot.x(), 2.0 * 100.0 / 9.81, 0.01);
+# Spring-mass: m = 1, k = 100 from x = 1: x = cos(10 t); energy 0.5 k x^2 = 50 stays constant.
+let w = phys.system("nsc");
+w.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let wall = w.ground("wall");
+let mass = w.sphere("mass", 0.1, 1000.0).pos(1.0, 0.0, 0.0);
+mass.mass_props(1.0, 0.01, 0.01, 0.01);
+w.spring("sp", wall, mass, 100.0, 0.0, 0.0);
+let e0 = w.energy();
+phys.assert_close(e0, 50.0, 0.000001);
+w.run(2.0);
+phys.assert_close(mass.x(), cos(20.0), 0.0005);
+phys.assert_close(w.energy(), e0, 0.0001);                     # energy drift bound for the undamped case
+# Damped (zeta = 0.2): x = e^(-2t) (cos wd t + (2/wd) sin wd t), wd = 10 sqrt(0.96).
+let d = phys.system("nsc");
+d.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let wall_d = d.ground("wall");
+let mass_d = d.sphere("mass", 0.1, 1000.0).pos(1.0, 0.0, 0.0);
+mass_d.mass_props(1.0, 0.01, 0.01, 0.01);
+d.spring("sp", wall_d, mass_d, 100.0, 4.0, 0.0);
+d.run(1.0);
+let wd = 10.0 * sqrt(0.96);
+phys.assert_close(mass_d.x(), pow(2.718281828459045, -2.0) * (cos(wd) + 2.0 / wd * sin(wd)), 0.0005);
+# Spring with rest length 2 hanging under gravity settles at L0 + m g / k below the anchor.
+let h = phys.system("nsc");
+h.integrator("trapezoidal").timestep(0.001);
+let top = h.ground("top");
+let bob = h.sphere("bob", 0.1, 1000.0).pos(0.0, 0.0, -2.0);
+bob.mass_props(1.0, 0.01, 0.01, 0.01);
+h.spring("sp", top, bob, 100.0, 10.0, 2.0);
+h.run(5.0);
+phys.assert_close(bob.z(), -2.0 - 9.81 / 100.0, 0.0001);
+# Motors. The rotor turns about +z; motor_speed gives angle = w t exactly, motor_angle follows its function.
+let ms = phys.system("nsc");
+ms.gravity(0.0, 0.0, 0.0).timestep(0.001);
+let base = ms.ground("base");
+let rotor = ms.box("rotor", 1.0, 0.2, 0.2, 500.0).pos(0.5, 0.0, 0.0);
+let mot = ms.motor_speed("mot", base, rotor, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, "2.5");
+ms.run(2.0);
+phys.assert_close(mot.angle(), 5.0, 0.00001);
+phys.assert_close(rotor.x(), 0.5 * cos(5.0), 0.00001);
+phys.assert_close(rotor.y(), 0.5 * sin(5.0), 0.00001);
+let ma = phys.system("nsc");
+ma.gravity(0.0, 0.0, 0.0).timestep(0.001);
+let base_a = ma.ground("base");
+let rotor_a = ma.box("rotor", 1.0, 0.2, 0.2, 500.0).pos(0.5, 0.0, 0.0);
+let mota = ma.motor_angle("mot", base_a, rotor_a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, "0.5*sin(3*t)");
+ma.run(2.0);
+phys.assert_close(mota.angle(), 0.5 * sin(6.0), 0.00001);
+# Torque-free asymmetric box: angular momentum and kinetic energy are conserved.
+let tf = phys.system("nsc");
+tf.gravity(0.0, 0.0, 0.0).timestep(0.001).integrator("trapezoidal");
+let top3 = tf.box("tumbler", 1.0, 2.0, 3.0, 100.0).omega(0.1, 2.0, 0.1);
+let l0 = sqrt(top3.lx() * top3.lx() + top3.ly() * top3.ly() + top3.lz() * top3.lz());
+let ke0 = top3.ke();
+tf.run(10.0);
+let l1 = sqrt(top3.lx() * top3.lx() + top3.ly() * top3.ly() + top3.lz() * top3.lz());
+phys.assert_close(l1 / l0, 1.0, 0.000001);
+phys.assert_close(top3.ke() / ke0, 1.0, 0.000001);
+phys.assert_close(top3.vx(), 0.0, 0.0000001);
+end _dsl_
+savedsl(p, out);

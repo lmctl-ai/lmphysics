@@ -1,0 +1,23 @@
+# Slider-crank mechanism: a motor turns the crank at 10 rad/s, a rod links it to a slider on a guide.
+# Closed form for the slider: x = r cos(th) + sqrt(l^2 - r^2 sin^2(th)), crank r = 0.1, rod l = 0.3.
+out = ARGV.len() > 0 ? ARGV[0] : "build/slider_crank.dslb";
+mkdir("build/examples");
+p = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s = phys.system("nsc");
+s.gravity(0.0, 0.0, 0.0).timestep(0.0005).integrator("trapezoidal");
+let base = s.ground("base");
+let crank = s.box("crank", 0.1, 0.02, 0.02, 2000.0).pos(0.05, 0.0, 0.0);
+let rod = s.box("rod", 0.3, 0.02, 0.02, 2000.0).pos(0.25, 0.0, 0.0);
+let slider = s.box("slider", 0.04, 0.04, 0.04, 2000.0).pos(0.4, 0.0, 0.0);
+let drive = s.motor_speed("drive", base, crank, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, "10.0");
+s.revolute("wrist", crank, rod, 0.1, 0.0, 0.0, 0.0, 1.0, 0.0);
+s.revolute("pin", rod, slider, 0.4, 0.0, 0.0, 0.0, 1.0, 0.0);
+s.prismatic("guide", base, slider, 0.4, 0.0, 0.0, 1.0, 0.0, 0.0);
+s.record("slider", "x").record("drive", "angle,torque");
+s.run(1.0);
+let th = 10.0 * s.time();
+phys.assert_close(drive.angle(), th, 0.001);                   # rotation of the crank about +y
+phys.assert_close(slider.x(), 0.1 * cos(th) + sqrt(0.09 - 0.01 * sin(th) * sin(th)), 0.0003);
+s.save_csv("build/examples/slider_crank.csv");
+end _dsl_
+savedsl(p, out);
