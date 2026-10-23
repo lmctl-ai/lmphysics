@@ -76,9 +76,12 @@ ok "record_every thins the CSV (101 rows) and keeps the final state"
 # The CSV/OBJ pose bridge is pure lmscript: test it even without renderer/network access.
 timeout 30 "$LMSCRIPT" scripts/test-pose-bridge.lms >"$WORK/pose-bridge.log" 2>&1 || { cat "$WORK/pose-bridge.log" >&2; fail "pose bridge"; }
 for bad_pose in missing zero oversized; do
-  if timeout 30 "$LMSCRIPT" scripts/test-pose-bridge.lms "$bad_pose" >"$WORK/pose-$bad_pose.log" 2>&1; then
-    fail "pose bridge accepted $bad_pose input"
-  fi
+  set +e
+  timeout 30 "$LMSCRIPT" scripts/test-pose-bridge.lms "$bad_pose" >"$WORK/pose-$bad_pose.log" 2>&1
+  code=$?
+  set -e
+  [ "$code" = 1 ] || fail "pose bridge $bad_pose: exit $code, expected validation failure (1)"
+  grep -q "Error in host function 'assert'" "$WORK/pose-$bad_pose.log" || fail "pose bridge $bad_pose did not report validation failure"
 done
 ok "pose bridge preserves translation, quaternion orientation and OBJ topology; rejects malformed poses"
 
