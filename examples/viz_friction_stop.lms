@@ -1,0 +1,79 @@
+# How far does a sliding block go? A block on a rough floor stops after v^2 / (2 mu g) (Coulomb friction, independent of
+# mass). lmphysics (NSC contact with friction) drops a 4 kg block 12 mm onto the floor at about 6 m/s for 40 friction
+# coefficients from 0.05 to 0.8; once it has landed (0.2 s) the script takes its speed v0 and position and asserts that it
+# stops after v0^2 / (2 mu g) more metres. lmplot draws the sweep with the closed form and the speed of three of the runs.
+# (Dropping it from a small height is deliberate: Chrono's cone-complementarity friction lifts a block that starts
+# exactly in contact by mu |v| dt, a hop of mu*|v| m/s on the first step; see durable-memory/04-numerics.md.)
+# Output: images/friction_stop.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+for (k in range(0, 40)) {
+  let mu = 0.05 + 0.02 * float(k);
+  let w = phys.system("nsc");
+  w.material("rough", mu, 0.0).timestep(0.002);
+  w.floor("floor", "rough");
+  let blk = w.box("blk", 0.4, 0.4, 0.2, 125.0).pos(0.0, 0.0, 0.112).vel(6.4, 0.0, 0.0).collide("rough");
+  w.run(0.2);
+  let x0 = blk.x();
+  let v0 = blk.vx();
+  while (blk.vx() > 0.001 && w.time() < 30.0) {
+    w.step();
+  }
+  let dist = blk.x() - x0;
+  let want = v0 * v0 / (2.0 * mu * 9.81);
+  phys.assert_close(dist, want, 0.03 * want + 0.03);
+  phys.print(str(mu) + " " + str(dist) + " " + str(want));
+}
+let s1 = phys.system("nsc");
+s1.material("rough", 0.1, 0.0).timestep(0.002);
+s1.floor("floor", "rough");
+let c1 = s1.box("blk", 0.4, 0.4, 0.2, 125.0).pos(0.0, 0.0, 0.112).vel(6.4, 0.0, 0.0).collide("rough");
+s1.record("blk", "x,vx");
+s1.run(6.0);
+s1.save_csv("build/examples/friction_mu010.csv");
+let s2 = phys.system("nsc");
+s2.material("rough", 0.3, 0.0).timestep(0.002);
+s2.floor("floor", "rough");
+let c2 = s2.box("blk", 0.4, 0.4, 0.2, 125.0).pos(0.0, 0.0, 0.112).vel(6.4, 0.0, 0.0).collide("rough");
+s2.record("blk", "x,vx");
+s2.run(6.0);
+s2.save_csv("build/examples/friction_mu030.csv");
+let s3 = phys.system("nsc");
+s3.material("rough", 0.6, 0.0).timestep(0.002);
+s3.floor("floor", "rough");
+let c3 = s3.box("blk", 0.4, 0.4, 0.2, 125.0).pos(0.0, 0.0, 0.112).vel(6.4, 0.0, 0.0).collide("rough");
+s3.record("blk", "x,vx");
+s3.run(6.0);
+s3.save_csv("build/examples/friction_mu060.csv");
+end _dsl_
+savedsl(sim, "build/viz_friction_stop-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/viz_friction_stop-sim.dslb;
+assert(r.code == 0);
+write_file("build/examples/friction_stop.txt", r.stdout);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/friction_stop.png", 1100, 480);
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set title 'Sliding distance after landing at 6.4 m/s'");
+plot.cmd("set xlabel 'friction coefficient mu'");
+plot.cmd("set ylabel 'distance [m]'");
+plot.cmd("set grid");
+plot.cmd("set logscale y");
+plot.cmd("set key top right box opaque");
+plot.cmd("plot 'build/examples/friction_stop.txt' every ::0::39 using 1:3 with lines lw 4 lc rgb '#bbbbbb' title 'v0^2 / (2 mu g)', 'build/examples/friction_stop.txt' every ::0::39 using 1:2 with points pt 7 ps 1 lc rgb '#d62728' title 'lmphysics'");
+plot.cmd("unset logscale y");
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Speed of the block: linear decay at mu g'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'speed [m/s]'");
+plot.cmd("set yrange [0:6.6]");
+plot.cmd("set key top right box opaque");
+plot.cmd("plot 'build/examples/friction_mu010.csv' skip 1 using 1:3 with lines lw 2 lc rgb '#1f77b4' title 'mu = 0.1', 'build/examples/friction_mu030.csv' skip 1 using 1:3 with lines lw 2 lc rgb '#2ca02c' title 'mu = 0.3', 'build/examples/friction_mu060.csv' skip 1 using 1:3 with lines lw 2 lc rgb '#d62728' title 'mu = 0.6'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/viz_friction_stop-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/viz_friction_stop-draw.dslb;
+assert(r.code == 0);
+println("wrote images/friction_stop.png");

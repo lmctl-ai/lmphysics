@@ -1,0 +1,56 @@
+# Animation: a double pendulum (two revolute joints, HHT integrator) released from rest at 126 degrees. lmphysics
+# simulates 6 s and records both bob positions; lmscript walks through the CSV and has lmdraw render one frame every 50 ms
+# (rods, bobs and a trail of the lower bob); ffmpeg turns the frames into images/double_pendulum.gif.
+# Needs ffmpeg on PATH. Output: images/double_pendulum.gif   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("build/rendered");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let a = phys.system("nsc");
+a.integrator("hht").timestep(0.001);
+let pin = a.ground("pin");
+let b1 = a.sphere("b1", 0.03, 26000.0).pos(sin(2.2), 0.0, 0.0 - cos(2.2));
+let b2 = a.sphere("b2", 0.03, 26000.0).pos(2.0 * sin(2.2), 0.0, 0.0 - 2.0 * cos(2.2));
+a.revolute("h1", pin, b1, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+a.revolute("h2", b1, b2, sin(2.2), 0.0, 0.0 - cos(2.2), 0.0, 1.0, 0.0);
+a.record("b1", "x,z").record("b2", "x,z");
+let e0 = a.energy();
+a.run(6.0);
+phys.assert_close(a.energy() / e0, 1.0, 0.001);
+a.save_csv("build/examples/anim_dpend.csv");
+end _dsl_
+savedsl(sim, "build/anim_double_pendulum-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/anim_double_pendulum-sim.dslb;
+assert(r.code == 0);
+
+rows = csv_parse(read_file("build/examples/anim_dpend.csv"));
+nframes = 120;
+trail = "";
+for (k in range(0, nframes)) {
+  m = rows.get(k * 50, null);
+  x1 = 300.0 + 105.0 * m.get("b1.x", 0.0);
+  y1 = 185.0 - 105.0 * m.get("b1.z", 0.0);
+  x2 = 300.0 + 105.0 * m.get("b2.x", 0.0);
+  y2 = 185.0 - 105.0 * m.get("b2.z", 0.0);
+  trail = trail + sprintf("%.1f,%.1f ", x2, y2);
+  tlabel = sprintf("t = %.2f s", m.get("t", 0.0));
+  frame = "build/rendered/f" + sprintf("%03d", k) + ".png";
+  d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+  scene.canvas(600, 430, "#0f1720");
+  scene.text(24.0, 34.0, 18.0, "Double pendulum (lmphysics / Chrono, HHT)", "#e6edf3");
+  scene.text(24.0, 58.0, 13.0, ${tlabel}, "#9fb3c8");
+  scene.polyline(${trail}, "#f5c16c", 1.5).set_attr("opacity", "0.55");
+  scene.line(300.0, 185.0, ${x1}, ${y1}, "#9fb3c8", 3.0);
+  scene.line(${x1}, ${y1}, ${x2}, ${y2}, "#9fb3c8", 3.0);
+  scene.circle(300.0, 185.0, 5.0, "#e6edf3");
+  scene.circle(${x1}, ${y1}, 11.0, "#4fa3ff");
+  scene.circle(${x2}, ${y2}, 11.0, "#ff6b6b");
+  scene.render_png(${frame}, 600, 430, 1);
+end _dsl_
+  savedsl(d, "build/frame.dslb");
+  r = system ${dsl_cli(d)} --dsl build/frame.dslb;
+  assert(r.code == 0);
+}
+r = system ffmpeg -y -loglevel error -framerate 20 -i build/rendered/f%03d.png -vf "split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse" images/double_pendulum.gif;
+assert(r.code == 0);
+println("wrote images/double_pendulum.gif");

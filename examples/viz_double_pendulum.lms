@@ -1,0 +1,82 @@
+# Sensitive dependence on initial conditions: two double pendulums (two revolute joints, equal 3 kg bobs on massless
+# 1 m links) released from rest at 126 degrees, the second one rotated by one micro-radian. Their tips stay together for
+# a few seconds and then separate exponentially, about one e-fold per 0.8 s, until the two runs are unrelated.
+# lmphysics integrates with HHT and checks that the energy is conserved to 1e-3; lmscript computes the separation of
+# the two tips from the two CSV files and lmplot draws the paths and the (log) separation.
+# Output: images/double_pendulum.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let a = phys.system("nsc");
+a.integrator("hht").timestep(0.001);
+let pin_a = a.ground("pin");
+let a1 = a.sphere("b1", 0.03, 26000.0).pos(sin(2.2), 0.0, 0.0 - cos(2.2));
+let a2 = a.sphere("b2", 0.03, 26000.0).pos(2.0 * sin(2.2), 0.0, 0.0 - 2.0 * cos(2.2));
+a.revolute("h1", pin_a, a1, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+a.revolute("h2", a1, a2, sin(2.2), 0.0, 0.0 - cos(2.2), 0.0, 1.0, 0.0);
+a.record("b2", "x,z");
+let ea = a.energy();
+a.run(15.0);
+phys.assert_close(a.energy() / ea, 1.0, 0.001);
+a.save_csv("build/examples/dpend_a.csv");
+let b = phys.system("nsc");
+b.integrator("hht").timestep(0.001);
+let pin_b = b.ground("pin");
+let b1 = b.sphere("b1", 0.03, 26000.0).pos(sin(2.200001), 0.0, 0.0 - cos(2.200001));
+let b2 = b.sphere("b2", 0.03, 26000.0).pos(sin(2.200001) + sin(2.2), 0.0, 0.0 - cos(2.200001) - cos(2.2));
+b.revolute("h1", pin_b, b1, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+b.revolute("h2", b1, b2, sin(2.200001), 0.0, 0.0 - cos(2.200001), 0.0, 1.0, 0.0);
+b.record("b2", "x,z");
+let eb = b.energy();
+b.run(15.0);
+phys.assert_close(b.energy() / eb, 1.0, 0.001);
+b.save_csv("build/examples/dpend_b.csv");
+end _dsl_
+savedsl(sim, "build/viz_double_pendulum-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/viz_double_pendulum-sim.dslb;
+assert(r.code == 0);
+
+# Tip separation of the two runs, one line per 25 ms: "t distance".
+ra = csv_parse(read_file("build/examples/dpend_a.csv"));
+rb = csv_parse(read_file("build/examples/dpend_b.csv"));
+sep = "";
+for (i in range(0, ra.len())) {
+  if (i % 25 == 0) {
+    ma = ra.get(i, null);
+    mb = rb.get(i, null);
+    dx = ma.get("b2.x", 0.0) - mb.get("b2.x", 0.0);
+    dz = ma.get("b2.z", 0.0) - mb.get("b2.z", 0.0);
+    sep = sep + sprintf("%.4f %.9f\n", ma.get("t", 0.0), sqrt(dx * dx + dz * dz) + 0.000000001);
+  }
+}
+write_file("build/examples/dpend_sep.txt", sep);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/double_pendulum.png", 1100, 520);
+plot.cmd("set datafile separator ','");
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set title 'Double pendulum, path of the lower bob (HHT)'");
+plot.cmd("set xlabel 'x [m]'");
+plot.cmd("set ylabel 'z [m]'");
+plot.cmd("set xrange [-2.2:2.2]");
+plot.cmd("set yrange [-2.2:2.2]");
+plot.cmd("set grid");
+plot.cmd("set key bottom right box opaque");
+plot.cmd("plot 'build/examples/dpend_a.csv' skip 1 using 2:3 with lines lw 1 lc rgb '#1f77b4' title 'run A', 'build/examples/dpend_b.csv' skip 1 using 2:3 with lines lw 1 lc rgb '#d62728' title 'run B (+1e-6 rad)'");
+plot.cmd("set autoscale x");
+plot.cmd("set datafile separator whitespace");
+plot.cmd("set title 'distance between the two lower bobs'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'separation [m]  (log scale)'");
+plot.cmd("set logscale y");
+plot.cmd("set yrange [1e-7:5]");
+plot.cmd("set format y '10^{%L}'");
+plot.cmd("unset key");
+plot.cmd("plot 'build/examples/dpend_sep.txt' using 1:2 with lines lw 2 lc rgb '#2ca02c'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/viz_double_pendulum-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/viz_double_pendulum-draw.dslb;
+assert(r.code == 0);
+println("wrote images/double_pendulum.png");

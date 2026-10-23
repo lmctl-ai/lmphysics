@@ -1,0 +1,98 @@
+# Projectile motion without air: a ball launched at 20 m/s from the ground. Left: trajectories for five launch angles
+# (complementary angles 15/75 and 30/60 land at the same spot). Right: the range for every angle from 2 to 88 degrees,
+# simulated with lmphysics (trapezoidal, 1 ms steps) against the textbook v^2 sin(2 theta) / g, maximal at 45 degrees.
+# lmphysics asserts every landing point against the closed form; lmscript collects the sweep from the host's printed lines.
+# Output: images/projectile.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let p1 = phys.system("nsc");
+p1.integrator("trapezoidal").timestep(0.001);
+let ball_p1 = p1.sphere("ball", 0.05, 800.0).vel(20.0 * cos(15.0 * 0.017453292519943295), 0.0, 20.0 * sin(15.0 * 0.017453292519943295));
+p1.record("ball", "x,z");
+p1.step();
+while (ball_p1.z() > 0.0) { p1.step(); }
+phys.assert_close(ball_p1.x(), 400.0 * sin(2.0 * 15.0 * 0.017453292519943295) / 9.81, 0.05);
+p1.save_csv("build/examples/proj_p1.csv");
+let p2 = phys.system("nsc");
+p2.integrator("trapezoidal").timestep(0.001);
+let ball_p2 = p2.sphere("ball", 0.05, 800.0).vel(20.0 * cos(30.0 * 0.017453292519943295), 0.0, 20.0 * sin(30.0 * 0.017453292519943295));
+p2.record("ball", "x,z");
+p2.step();
+while (ball_p2.z() > 0.0) { p2.step(); }
+phys.assert_close(ball_p2.x(), 400.0 * sin(2.0 * 30.0 * 0.017453292519943295) / 9.81, 0.05);
+p2.save_csv("build/examples/proj_p2.csv");
+let p3 = phys.system("nsc");
+p3.integrator("trapezoidal").timestep(0.001);
+let ball_p3 = p3.sphere("ball", 0.05, 800.0).vel(20.0 * cos(45.0 * 0.017453292519943295), 0.0, 20.0 * sin(45.0 * 0.017453292519943295));
+p3.record("ball", "x,z");
+p3.step();
+while (ball_p3.z() > 0.0) { p3.step(); }
+phys.assert_close(ball_p3.x(), 400.0 * sin(2.0 * 45.0 * 0.017453292519943295) / 9.81, 0.05);
+p3.save_csv("build/examples/proj_p3.csv");
+let p4 = phys.system("nsc");
+p4.integrator("trapezoidal").timestep(0.001);
+let ball_p4 = p4.sphere("ball", 0.05, 800.0).vel(20.0 * cos(60.0 * 0.017453292519943295), 0.0, 20.0 * sin(60.0 * 0.017453292519943295));
+p4.record("ball", "x,z");
+p4.step();
+while (ball_p4.z() > 0.0) { p4.step(); }
+phys.assert_close(ball_p4.x(), 400.0 * sin(2.0 * 60.0 * 0.017453292519943295) / 9.81, 0.05);
+p4.save_csv("build/examples/proj_p4.csv");
+let p5 = phys.system("nsc");
+p5.integrator("trapezoidal").timestep(0.001);
+let ball_p5 = p5.sphere("ball", 0.05, 800.0).vel(20.0 * cos(75.0 * 0.017453292519943295), 0.0, 20.0 * sin(75.0 * 0.017453292519943295));
+p5.record("ball", "x,z");
+p5.step();
+while (ball_p5.z() > 0.0) { p5.step(); }
+phys.assert_close(ball_p5.x(), 400.0 * sin(2.0 * 75.0 * 0.017453292519943295) / 9.81, 0.05);
+p5.save_csv("build/examples/proj_p5.csv");
+for (k in range(0, 44)) {
+  let deg = 2.0 + 2.0 * float(k);
+  let rad = deg * 0.017453292519943295;
+  let w = phys.system("nsc");
+  w.integrator("trapezoidal").timestep(0.001);
+  let shot = w.sphere("shot", 0.05, 800.0).vel(20.0 * cos(rad), 0.0, 20.0 * sin(rad));
+  w.step();
+  let xprev = 0.0;
+  let zprev = 0.0;
+  while (shot.z() > 0.0) {
+    xprev = shot.x();
+    zprev = shot.z();
+    w.step();
+  }
+  let landing = xprev + (shot.x() - xprev) * zprev / (zprev - shot.z());
+  phys.print(str(deg) + " " + str(landing));
+}
+end _dsl_
+savedsl(sim, "build/viz_projectile-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/viz_projectile-sim.dslb;
+assert(r.code == 0);
+write_file("build/examples/projectile_range.txt", r.stdout);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/projectile.png", 1100, 480);
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Trajectories at 20 m/s'");
+plot.cmd("set xlabel 'x [m]'");
+plot.cmd("set ylabel 'height [m]'");
+plot.cmd("set yrange [0:21]");
+plot.cmd("set grid");
+plot.cmd("set key top right box opaque");
+plot.cmd("plot 'build/examples/proj_p1.csv' skip 1 using 2:3 with lines lw 2 lc rgb '#1f77b4' title '15 deg', 'build/examples/proj_p2.csv' skip 1 using 2:3 with lines lw 2 lc rgb '#2ca02c' title '30 deg', 'build/examples/proj_p3.csv' skip 1 using 2:3 with lines lw 2 lc rgb '#ff7f0e' title '45 deg', 'build/examples/proj_p4.csv' skip 1 using 2:3 with lines lw 2 lc rgb '#d62728' title '60 deg', 'build/examples/proj_p5.csv' skip 1 using 2:3 with lines lw 2 lc rgb '#9467bd' title '75 deg'");
+plot.cmd("set datafile separator whitespace");
+plot.cmd("set title 'Range against launch angle'");
+plot.cmd("set xlabel 'launch angle [deg]'");
+plot.cmd("set ylabel 'range [m]'");
+plot.cmd("set autoscale y");
+plot.cmd("set xrange [0:90]");
+plot.cmd("set arrow 1 from 45,0 to 45,41 nohead dt 3 lc rgb 'gray40'");
+plot.cmd("set key bottom center box opaque");
+plot.cmd("plot 400.0*sin(2*x*pi/180)/9.81 with lines lw 3 lc rgb '#bbbbbb' title 'v^2 sin(2 theta) / g', 'build/examples/projectile_range.txt' every ::0::43 using 1:2 with points pt 7 ps 1 lc rgb '#d62728' title 'lmphysics'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/viz_projectile-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/viz_projectile-draw.dslb;
+assert(r.code == 0);
+println("wrote images/projectile.png");
