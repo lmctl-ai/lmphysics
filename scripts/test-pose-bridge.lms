@@ -1,0 +1,17 @@
+import "../examples/bridge/pose_obj.lms";
+row = {"b.x":1.0,"b.y":2.0,"b.z":3.0,"b.qw":1.0,"b.qx":0.0,"b.qy":0.0,"b.qz":0.0};
+p = pose_point(row,"b",[2.0,3.0,4.0]);
+assert(p[0]==3.0 && p[1]==5.0 && p[2]==7.0);
+# 90 degrees around Z, deliberately non-unit: normalize without changing orientation.
+row["b.qw"] = sqrt(2.0); row["b.qz"] = sqrt(2.0);
+p = pose_point(row,"b",[2.0,0.0,0.0]);
+assert(abs(p[0]-1.0)<0.000000001 && abs(p[1]-4.0)<0.000000001 && abs(p[2]-3.0)<0.000000001);
+# 90 degrees around Y: local +Z becomes world +X (not a reflected rotation).
+row["b.qw"]=sqrt(0.5); row["b.qz"]=0.0; row["b.qy"]=sqrt(0.5);
+p=pose_point(row,"b",[0.0,0.0,2.0]);
+assert(abs(p[0]-3.0)<0.000000001 && abs(p[1]-2.0)<0.000000001 && abs(p[2]-3.0)<0.000000001);
+mkdir("build/examples");
+pose_box_obj(row,"b",2.0,4.0,6.0,"build/examples/pose_bridge_test.obj");
+lines=split(trim(read_file("build/examples/pose_bridge_test.obj")),"\n");
+assert(lines.len()==21);
+println("pose bridge: translation, quaternion order/handedness, normalization and OBJ topology pass");

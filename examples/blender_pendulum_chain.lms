@@ -1,0 +1,62 @@
+# Three rigid links on revolute joints, released from 40 degrees; pose at 0.55 s.
+# Full recorded quaternions orient the links; the OBJ bridge preserves Chrono's Z-up frame.
+import "./bridge/pose_obj.lms";
+mkdir("build/examples"); mkdir("images");
+sim=_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s=phys.system("nsc"); s.integrator("hht").timestep(0.001).record_every(50);
+let ground=s.ground("pin");
+let angle=0.7; let l=0.9; let top=3.2;
+let a=s.box("a",0.15,0.18,l,700.0).pos(0.5*l*sin(angle),0.0,top-0.5*l*cos(angle)).rot_axis(0.0,1.0,0.0,0.0-angle);
+let b=s.box("b",0.15,0.18,l,700.0).pos(1.5*l*sin(angle),0.0,top-1.5*l*cos(angle)).rot_axis(0.0,1.0,0.0,0.0-angle);
+let c=s.box("c",0.15,0.18,l,700.0).pos(2.5*l*sin(angle),0.0,top-2.5*l*cos(angle)).rot_axis(0.0,1.0,0.0,0.0-angle);
+s.revolute("hinge_a",ground,a,0.0,0.0,top,0.0,1.0,0.0);
+s.revolute("hinge_b",a,b,l*sin(angle),0.0,top-l*cos(angle),0.0,1.0,0.0);
+s.revolute("hinge_c",b,c,2.0*l*sin(angle),0.0,top-2.0*l*cos(angle),0.0,1.0,0.0);
+s.record("a","x,y,z,qw,qx,qy,qz").record("b","x,y,z,qw,qx,qy,qz").record("c","x,y,z,qw,qx,qy,qz");
+let energy=s.energy(); s.run(0.55); phys.assert_close(s.energy()/energy,1.0,0.001);
+s.save_csv("build/examples/chain_poses.csv");
+end _dsl_
+savedsl(sim,"build/blender_pendulum_chain-sim.dslb");
+r=system ${dsl_cli(sim)} --dsl build/blender_pendulum_chain-sim.dslb;
+if (r.code!=0) { println(r.stdout); println(r.stderr); } assert(r.code==0);
+rows=csv_parse(read_file("build/examples/chain_poses.csv")); row=rows[rows.len()-1];
+for (name in ["a","b","c"]) { pose_box_obj(row,name,0.15,0.18,0.9,"build/examples/chain_"+name+".obj"); }
+# Match adjacent local endpoints: this catches quaternion order, sign and transpose mistakes.
+ends=[];
+for (name in ["a","b","c"]) {
+ push(ends,pose_point(row,name,[0.0,0.0,0.45])); push(ends,pose_point(row,name,[0.0,0.0,-0.45]));
+}
+for (k in range(0,3)) {
+ assert(abs(ends[0][k]-[0.0,0.0,3.2][k])<0.0001);
+ assert(abs(ends[1][k]-ends[2][k])<0.0001);
+ assert(abs(ends[3][k]-ends[4][k])<0.0001);
+}
+# Joint centers are measured endpoints, then captured as numeric literals in the render block.
+j1=ends[1]; j2=ends[3];
+draw=_dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+let brass=scene.material(0.8,0.51,0.15,0.7,0.25,0.0,0.0,0.0,0.0,0.0);
+let blue=scene.material(0.07,0.28,0.42,0.25,0.3,0.0,0.0,0.0,0.0,0.0);
+let red=scene.material(0.7,0.15,0.045,0.15,0.32,0.0,0.0,0.0,0.0,0.0);
+scene.import_obj("build/examples/chain_a.obj").set_material(blue);
+scene.import_obj("build/examples/chain_b.obj").set_material(red);
+scene.import_obj("build/examples/chain_c.obj").set_material(blue);
+let p0=scene.uv_sphere(0.12,24,16,true); p0.translate(0.0,0.0,3.2); p0.set_material(brass);
+let p1=scene.uv_sphere(0.12,24,16,true); p1.translate(${j1[0]},0.0,${j1[2]}); p1.set_material(brass);
+let p2=scene.uv_sphere(0.12,24,16,true); p2.translate(${j2[0]},0.0,${j2[2]}); p2.set_material(brass);
+let support=scene.cube(1.0); support.scale(1.0,0.6,0.15); support.translate(0.0,0.0,3.42); support.set_material(brass);
+scene.ground_plane(0.0,30.0,0.17,0.20,0.24);
+scene.area_light(-4.0,-5.0,7.0,0.0,0.0,1.7,1.0,0.88,0.73,1100.0,4.0);
+scene.area_light(4.0,2.0,5.0,0.0,0.0,1.7,0.65,0.8,1.0,700.0,3.0);
+scene.camera_look_at(3.7,-8.5,3.7,0.35,0.0,1.75,38.0);
+
+scene.world_color(0.7,0.8,1.0,0.25);
+scene.set_view_transform("AgX");
+scene.render_settings(6,17,true);
+scene.render_png("images/blender_pendulum_chain.png",32,800,700);
+end _dsl_
+savedsl(draw, "build/blender_pendulum_chain-draw.dslb");
+argv=dsl_cli(draw); push(argv,"--dsl"); push(argv,"build/blender_pendulum_chain-draw.dslb");
+r=system(argv,300000);
+if (r.code!=0) { println(r.stdout); println(r.stderr); }
+assert(r.code==0);
+println("wrote images/blender_pendulum_chain.png");

@@ -1,0 +1,37 @@
+# Portable lmphysics CSV -> lmblender OBJ bridge. Coordinates remain right-handed Z-up.
+# CSV headers are t,body.x,body.y,body.z,body.qw,body.qx,body.qy,body.qz,... .
+# Quaternions are Hamilton (w,x,y,z), mapping body-local coordinates into world space.
+fn pose_value(row, name, field) {
+  let value = row.get(name + "." + field, null);
+  assert(value != null, "missing pose column: " + name + "." + field);
+  value = num(value);
+  assert(abs(value) <= 1000000.0, "non-finite or oversized pose value");
+  return value;
+}
+fn pose_point(row, name, point) {
+  let w = pose_value(row, name, "qw");
+  let x = pose_value(row, name, "qx");
+  let y = pose_value(row, name, "qy");
+  let z = pose_value(row, name, "qz");
+  let norm = sqrt(w*w + x*x + y*y + z*z);
+  assert(norm > 0.000000001, "zero quaternion");
+  w = w/norm; x = x/norm; y = y/norm; z = z/norm;
+  let tx = 2.0 * (y*point[2] - z*point[1]);
+  let ty = 2.0 * (z*point[0] - x*point[2]);
+  let tz = 2.0 * (x*point[1] - y*point[0]);
+  return [pose_value(row,name,"x") + point[0] + w*tx + y*tz - z*ty,
+          pose_value(row,name,"y") + point[1] + w*ty + z*tx - x*tz,
+          pose_value(row,name,"z") + point[2] + w*tz + x*ty - y*tx];
+}
+fn pose_box_obj(row, name, sx, sy, sz, path) {
+  assert(sx > 0.0 && sx <= 10000.0 && sy > 0.0 && sy <= 10000.0 && sz > 0.0 && sz <= 10000.0, "invalid box dimensions");
+  let out = "# World-space box from lmphysics CSV; metres, Z-up\n";
+  let corners = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  for (c in corners) {
+    let p = pose_point(row, name, [c[0]*sx/2.0,c[1]*sy/2.0,c[2]*sz/2.0]);
+    out = out + sprintf("v %.12f %.12f %.12f\n",p[0],p[1],p[2]);
+  }
+  # Twelve outward-facing triangles, including the bottom face.
+  out = out + "f 1 4 3\nf 1 3 2\nf 5 6 7\nf 5 7 8\nf 1 2 6\nf 1 6 5\nf 2 3 7\nf 2 7 6\nf 3 4 8\nf 3 8 7\nf 4 1 5\nf 4 5 8\n";
+  write_file(path, out);
+}

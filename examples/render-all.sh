@@ -6,7 +6,7 @@ set -eu
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="$HERE/build:$PATH"
 cd "$HERE/docs"
-for ex in pendulum incline slider_crank viz_energy_drift viz_pendulum_phase viz_restitution viz_damping viz_double_pendulum anim_double_pendulum viz_projectile viz_friction_stop viz_resonance viz_incline_forces viz_crank_snapshots viz_pour combo/bounce_plot; do
+for ex in pendulum incline slider_crank viz_energy_drift viz_pendulum_phase viz_restitution viz_damping viz_double_pendulum anim_double_pendulum viz_projectile viz_friction_stop viz_resonance viz_incline_forces viz_crank_snapshots viz_pour combo/bounce_plot blender_brick_stack blender_pendulum_chain; do
   timeout 600 lmscript "../examples/$ex.lms"
 done
 ls -l images

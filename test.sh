@@ -73,6 +73,10 @@ ok "$n test programs compile as bytecode v5, run and pass their own assertions"
 [ "$(wc -l <build/loads_thinned.csv | tr -d ' ')" = 102 ] || fail "record_every(10) over 1000 steps should give header + 101 rows"
 ok "record_every thins the CSV (101 rows) and keeps the final state"
 
+# The CSV/OBJ pose bridge is pure lmscript: test it even without renderer/network access.
+timeout 30 "$LMSCRIPT" scripts/test-pose-bridge.lms >"$WORK/pose-bridge.log" 2>&1 || { cat "$WORK/pose-bridge.log" >&2; fail "pose bridge"; }
+ok "pose bridge preserves translation, quaternion orientation and OBJ topology"
+
 # Gallery: every image the README references exists and is a valid PNG/GIF; every linked example exists.
 img_ok() { # file
   head -c 8 "$1" | od -An -tx1 | tr -d ' \n' | grep -q '^89504e470d0a1a0a' && return 0
@@ -99,7 +103,7 @@ if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; t
   for src in examples/*.lms examples/combo/*.lms; do
     name="$(basename "$src" .lms)"
     case "$name" in anim_*) command -v ffmpeg >/dev/null 2>&1 || { echo "SKIPPED: $name needs ffmpeg"; continue; };; esac
-    (cd "$EXDIR" && "$LMSCRIPT" "$ROOT/$src") >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name example"; }
+    (cd "$EXDIR" && timeout 400 "$LMSCRIPT" "$ROOT/$src") >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name example"; }
     n=$((n+1))
   done
   imgs=0
@@ -108,7 +112,7 @@ if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; t
   for f in "$EXDIR"/build/examples/*.csv; do echo "$(sha "$f") $(basename "$f")"; done >"$WORK/before.txt"
   for src in examples/*.lms examples/combo/*.lms; do
     case "$(basename "$src" .lms)" in anim_*) command -v ffmpeg >/dev/null 2>&1 || continue;; esac
-    (cd "$EXDIR" && "$LMSCRIPT" "$ROOT/$src") >/dev/null 2>&1 || fail "$src rerun"
+    (cd "$EXDIR" && timeout 400 "$LMSCRIPT" "$ROOT/$src") >/dev/null 2>&1 || fail "$src rerun"
   done
   for f in "$EXDIR"/build/examples/*.csv; do echo "$(sha "$f") $(basename "$f")"; done >"$WORK/after.txt"
   cmp -s "$WORK/before.txt" "$WORK/after.txt" || fail "result files differ on rerun"

@@ -5,6 +5,14 @@
 [![CI](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+### Physics rendered with Cycles
+
+| ![Falling brick stack](docs/images/blender_brick_stack.png) | ![Pendulum chain](docs/images/blender_pendulum_chain.png) |
+| --- | --- |
+| Six falling bricks: initial, impact at 0.4 s, settled at 1.6 s.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/blender_brick_stack.lms` | Three linked pendulums at 0.55 s, with full simulated orientations.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/blender_pendulum_chain.lms` |
+
+These scripts pass recorded positions and quaternions through the [portable CSV-to-OBJ bridge](examples/bridge/README.md) to [lmblender](https://github.com/lmctl-ai/lmblender). They work with published hosts; no additional release is required.
+
 ### Mechanisms and joints
 
 | ![viz_double_pendulum](docs/images/double_pendulum.png) | ![anim_double_pendulum](docs/images/double_pendulum.gif) |
@@ -47,7 +55,7 @@
 | --- | --- |
 | Projectile range against launch angle: 44 simulations, 45 degrees wins.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_projectile.lms` | |
 
-Every picture is made by the script named under it: it runs the simulation with lmphysics, draws with [lmplot](https://github.com/lmctl-ai/lmplot), [lmdraw](https://github.com/lmctl-ai/lmdraw) or [lmcad](https://github.com/lmctl-ai/lmcad) and writes `images/` into the current directory. `examples/render-all.sh` regenerates `docs/images/`.
+Every picture is made by the script named under it: it runs the simulation with lmphysics, draws with [lmplot](https://github.com/lmctl-ai/lmplot), [lmdraw](https://github.com/lmctl-ai/lmdraw) , [lmcad](https://github.com/lmctl-ai/lmcad) or [lmblender](https://github.com/lmctl-ai/lmblender) and writes `images/` into the current directory. `examples/render-all.sh` regenerates `docs/images/`.
 
 It is a scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html) `_dsl_` block and run it. No Python, no data files, no shared libraries.
 
@@ -104,7 +112,7 @@ gravity `(0, 0, -9.81)` by default; lengths in m, masses in kg, angles in rad.
 (`l*` is angular momentum about the centre, world frame; `ke` kinetic energy).
 `Joint`: `angle` (rotation of B about the joint axis since creation, unwrapped) `length` `force`
 (spring force, otherwise reaction magnitude) `torque` and `reaction_x/y/z` (force on B, world frame).
-Record columns are the same names, joints also `fx fy fz tx ty tz`. Schema and rules:
+Recorded body poses also include `qw qx qy qz` (Hamilton quaternions, scalar first). Record columns are the same names, joints also `fx fy fz tx ty tz`. Schema and rules:
 [durable-memory/03-schema-v0.md](durable-memory/03-schema-v0.md).
 
 ### Choosing numerics

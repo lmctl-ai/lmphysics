@@ -1,0 +1,57 @@
+# Six falling bricks: initial pose, impact at 0.4 s, and settled at 1.6 s.
+# lmphysics CSV -> quaternion-baked OBJ -> lmblender Cycles; no native bridge release needed.
+import "./bridge/pose_obj.lms";
+mkdir("build/examples"); mkdir("images");
+sim=_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s=phys.system("nsc");
+s.material("clay",0.55,0.05).timestep(0.002).solver("apgd",100).record_every(100);
+s.floor("floor","clay");
+for (i in range(0,6)) {
+  let name="brick"+str(i);
+  s.box(name,0.7,0.38,0.25,1800.0).pos(0.035*float(i%2),0.0,0.55+0.43*float(i)).rot_axis(0.0,0.0,1.0,0.06*float(i%2)).collide("clay");
+  s.record(name,"x,y,z,qw,qx,qy,qz");
+}
+s.run(1.6); s.save_csv("build/examples/brick_poses.csv");
+end _dsl_
+savedsl(sim,"build/blender_brick_stack-sim.dslb");
+r=system ${dsl_cli(sim)} --dsl build/blender_brick_stack-sim.dslb;
+if (r.code!=0) { println(r.stdout); println(r.stderr); } assert(r.code==0);
+rows=csv_parse(read_file("build/examples/brick_poses.csv"));
+frames=[rows[0],rows[2],rows[rows.len()-1]];
+assert(abs(frames[1]["t"]-0.4)<0.000001);
+assert(frames[2]["brick0.z"]>0.10 && frames[2]["brick0.z"]<0.15);
+for (j in range(0,3)) {
+  for (i in range(0,6)) {
+    pose_box_obj(frames[j],"brick"+str(i),0.7,0.38,0.25,"build/examples/brick_"+str(j)+"_"+str(i)+".obj");
+  }
+}
+draw=_dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+let clay=scene.material(0.78,0.22,0.065,0.0,0.45,0.0,0.0,0.0,0.0,0.0);
+let blue=scene.material(0.08,0.29,0.43,0.0,0.38,0.0,0.0,0.0,0.0,0.0);
+for (j in range(0,3)) {
+ for (i in range(0,6)) {
+  let b=scene.import_obj("build/examples/brick_"+str(j)+"_"+str(i)+".obj");
+  b.translate(2.4*float(j)-2.4,0.0,0.0);
+  if (i%2==0) { b.set_material(clay); } else { b.set_material(blue); }
+ }
+}
+let ink=scene.material(0.9,0.9,0.88,0.0,0.5,0.0,0.0,0.0,0.0,0.0);
+let t0=scene.label("INITIAL",0.0,0.0,0.0,0.17); t0.rotate_x(90.0); t0.translate(-3.0,0.0,3.15); t0.set_material(ink);
+let t1=scene.label("IMPACT",0.0,0.0,0.0,0.17); t1.rotate_x(90.0); t1.translate(-0.55,0.0,3.15); t1.set_material(ink);
+let t2=scene.label("SETTLED",0.0,0.0,0.0,0.17); t2.rotate_x(90.0); t2.translate(1.8,0.0,3.15); t2.set_material(ink);
+scene.ground_plane(0.0,100.0,0.17,0.20,0.24);
+scene.area_light(-4.0,-5.0,8.0,0.0,0.0,1.0,1.0,0.88,0.73,1300.0,5.0);
+scene.area_light(4.0,2.0,5.0,0.0,0.0,1.0,0.65,0.8,1.0,700.0,4.0);
+scene.camera_look_at(3.0,-9.0,4.2,0.0,0.0,1.5,32.0);
+
+scene.world_color(0.7,0.8,1.0,0.25);
+scene.set_view_transform("AgX");
+scene.render_settings(6,17,true);
+scene.render_png("images/blender_brick_stack.png",32,960,560);
+end _dsl_
+savedsl(draw, "build/blender_brick_stack-draw.dslb");
+argv=dsl_cli(draw); push(argv,"--dsl"); push(argv,"build/blender_brick_stack-draw.dslb");
+r=system(argv,300000);
+if (r.code!=0) { println(r.stdout); println(r.stderr); }
+assert(r.code==0);
+println("wrote images/blender_brick_stack.png");
