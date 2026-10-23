@@ -1,0 +1,96 @@
+# Free-body diagram of a block on a 30 degree ramp, drawn to scale with lmdraw from numbers that lmphysics measured:
+# the 4 kg block slides under gravity (m g), the normal force N and Coulomb friction mu N (mu = 0.3). The net force down
+# the slope is m g sin(theta) - mu m g cos(theta) = m a. lmphysics simulates the slide and asserts the acceleration it
+# reaches against that closed form; lmscript measures it again from the recorded CSV and lmdraw labels the picture.
+# Output: images/incline_forces.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("build/rendered");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let th = 0.5235987755982988;
+let w = phys.system("nsc");
+w.material("m", 0.3, 0.0).timestep(0.001);
+w.box("ramp", 40.0, 4.0, 0.5, 1000.0).rot_axis(0.0, 1.0, 0.0, th).fixed(true).collide("m");
+let blk = w.box("blk", 0.4, 0.4, 0.4, 62.5).pos(0.45 * sin(th), 0.0, 0.45 * cos(th)).rot_axis(0.0, 1.0, 0.0, th).collide("m");
+phys.assert_close(blk.mass(), 4.0, 0.000001);
+w.record("blk", "vx,vz");
+w.run(1.4);
+phys.assert_close(blk.vx() * cos(th) - blk.vz() * sin(th), 9.81 * (sin(th) - 0.3 * cos(th)) * 1.4, 0.05);
+w.save_csv("build/examples/incline_forces.csv");
+end _dsl_
+savedsl(sim, "build/viz_incline_forces-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/viz_incline_forces-sim.dslb;
+assert(r.code == 0);
+
+rows = csv_parse(read_file("build/examples/incline_forces.csv"));
+r1 = rows.get(200, null);
+r2 = rows.get(1400, null);
+S = 0.5;
+C = 0.8660254037844386;
+v1 = r1.get("blk.vx", 0.0) * C - r1.get("blk.vz", 0.0) * S;
+v2 = r2.get("blk.vx", 0.0) * C - r2.get("blk.vz", 0.0) * S;
+acc = (v2 - v1) / 1.2;
+m = 4.0;
+g = 9.81;
+mu = 0.3;
+weight = m * g;
+normal = weight * C;
+fric = mu * normal;
+down = weight * S;
+net = down - fric;
+println(sprintf("N = %.2f N, friction = %.2f N, net = %.2f N, a = %.3f m/s2 (measured), %.3f (closed form)", normal, fric, net, acc, net / m));
+
+# Geometry in pixels (y grows down): the ramp rises to the right, the block slides down to the left.
+ax = 90.0; ay = 520.0;
+bx = 840.0; by = 520.0;
+cx = 840.0; cy = 520.0 - 750.0 * 0.5773502691896257;
+px = ax + 0.55 * (cx - ax);
+py = ay + 0.55 * (cy - ay);
+ux = C; uy = -S;               # up the slope
+nx = -S; ny = -C;              # normal, away from the ramp
+hx = px + nx * 50.0;
+hy = py + ny * 50.0;
+k = 3.0;                        # pixels per newton
+corner1 = sprintf("%.1f,%.1f", hx + ux * 50.0 + nx * 50.0, hy + uy * 50.0 + ny * 50.0);
+corner2 = sprintf("%.1f,%.1f", hx - ux * 50.0 + nx * 50.0, hy - uy * 50.0 + ny * 50.0);
+corner3 = sprintf("%.1f,%.1f", hx - ux * 50.0 - nx * 50.0, hy - uy * 50.0 - ny * 50.0);
+corner4 = sprintf("%.1f,%.1f", hx + ux * 50.0 - nx * 50.0, hy + uy * 50.0 - ny * 50.0);
+blockpath = "M " + corner1 + " L " + corner2 + " L " + corner3 + " L " + corner4 + " Z";
+rampath = sprintf("M %.1f,%.1f L %.1f,%.1f L %.1f,%.1f Z", ax, ay, bx, by, cx, cy);
+wx1 = hx; wy1 = hy; wx2 = hx; wy2 = hy + weight * k;
+nx2 = hx + nx * normal * k; ny2 = hy + ny * normal * k;
+fx2 = hx + ux * fric * k; fy2 = hy + uy * fric * k;
+dx2 = hx - ux * down * k; dy2 = hy - uy * down * k;
+t1 = sprintf("m g = %.1f N", weight);
+t2 = sprintf("N = m g cos 30 = %.1f N", normal);
+t3 = sprintf("friction mu N = %.1f N", fric);
+t4 = sprintf("m g sin 30 = %.1f N", down);
+t5 = sprintf("net %.1f N: a = %.2f m/s2", net, acc);
+t6 = sprintf("closed form g (sin 30 - mu cos 30) = %.2f m/s2", net / m);
+
+d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 650, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Block on a 30 degree ramp: the forces, measured", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "4 kg, friction coefficient 0.3. Arrow lengths are to scale; the acceleration is measured in the simulation.", "#9fb3c8");
+scene.path(${rampath}, "#33475b", "#5b7690", 2.0);
+scene.path(${blockpath}, "#4fa3ff", "#cfe3ff", 2.0);
+scene.arrow(${wx1}, ${wy1}, ${wx2}, ${wy2}, "#ffd166", 3.0);
+scene.arrow(${wx1}, ${wy1}, ${nx2}, ${ny2}, "#7bd88f", 3.0);
+scene.arrow(${wx1}, ${wy1}, ${fx2}, ${fy2}, "#ff6b6b", 3.0);
+scene.arrow(${wx1}, ${wy1}, ${dx2}, ${dy2}, "#c792ea", 3.0).set_attr("stroke-dasharray", "7 5");
+scene.text(${wx2} + 12.0, ${wy2} - 4.0, 14.0, ${t1}, "#ffd166");
+scene.text(${nx2} - 8.0, ${ny2} - 10.0, 14.0, ${t2}, "#7bd88f").set_attr("text-anchor", "end");
+scene.text(${fx2} + 34.0, ${fy2} - 22.0, 14.0, ${t3}, "#ff6b6b");
+scene.text(${dx2} - 12.0, ${dy2} + 18.0, 14.0, ${t4}, "#c792ea").set_attr("text-anchor", "end");
+scene.rect(40.0, 560.0, 420.0, 70.0, "#16222e").set_attr("rx", "8");
+scene.text(56.0, 588.0, 16.0, ${t5}, "#e6edf3").set_attr("font-weight", "700");
+scene.text(56.0, 612.0, 13.0, ${t6}, "#9fb3c8");
+scene.text(140.0, 508.0, 16.0, "30 deg", "#9fb3c8");
+scene.render_png("build/rendered/incline_forces.png", 900, 650, 1);
+end _dsl_
+savedsl(d, "build/viz_incline_forces-draw.dslb");
+r = system ${dsl_cli(d)} --dsl build/viz_incline_forces-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/incline_forces.png", "images/incline_forces.png");
+println("wrote images/incline_forces.png");
