@@ -2,6 +2,7 @@
 // Scripting only: the executable has no user-facing commands besides --dsl and the schema/version queries.
 #include <cmath>
 #include <cstdio>
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -18,6 +19,7 @@
 #include "chrono/collision/ChCollisionShapeBox.h"
 #include "chrono/collision/ChCollisionShapeCylinder.h"
 #include "chrono/collision/ChCollisionShapeSphere.h"
+#include "chrono/collision/bullet/LinearMath/cbtAlignedAllocator.h"
 #include "chrono/functions/ChFunctionBase.h"
 #include "chrono/physics/ChBody.h"
 #include "chrono/physics/ChForce.h"
@@ -38,6 +40,7 @@
 
 #include "dslvm.hpp"
 #include "expr.hpp"
+#include "memory_budget.hpp"
 #include "notices_embedded.hpp"
 #include "schema_embedded.hpp"
 
@@ -96,7 +99,8 @@ struct SysObj {
   std::vector<std::unique_ptr<BodyObj>> bodies;
   std::vector<std::unique_ptr<JointObj>> joints;
   std::vector<Record> recs;
-  std::vector<std::vector<double>> rows;
+  std::deque<double> rows;  // recorded steps, row-major with header.size() columns (fixed once started); a deque
+                            // grows in small blocks, without the 3x peak of a doubling vector
   std::vector<std::string> header{"t"};
   double dt = 1e-3;
   int every = 1;           // record every n-th step (System.record_every)
@@ -106,6 +110,7 @@ struct SysObj {
   std::string integrator = "euler";
   std::string solver = "psor";
   std::set<std::string> used_mats;  // materials attached to collision shapes: redefining them would not reach the shapes
+  std::set<std::string> names;      // body and joint names
 };
 
 struct MarginGuard {
@@ -186,8 +191,7 @@ void positive(const char *who, const char *what, double x) {
 
 void unique_name(SysObj &s, const std::string &name, const char *who) {
   if (name.empty()) throw dslvm::Error(std::string(who) + ": name must not be empty");
-  for (auto &b : s.bodies) if (b->name == name) throw dslvm::Error(std::string(who) + ": name '" + name + "' is already used");
-  for (auto &j : s.joints) if (j->name == name) throw dslvm::Error(std::string(who) + ": name '" + name + "' is already used");
+  if (s.names.count(name)) throw dslvm::Error(std::string(who) + ": name '" + name + "' is already used");
 }
 
 BodyObj *new_body(SysObj &s, const std::string &name, const char *who) {
@@ -198,6 +202,7 @@ BodyObj *new_body(SysObj &s, const std::string &name, const char *who) {
   b->b = chrono_types::make_shared<ch::ChBody>();
   b->sys = &s;
   s.sys->Add(b->b);
+  s.names.insert(name);
   s.bodies.push_back(std::move(b));
   return s.bodies.back().get();
 }
@@ -239,6 +244,7 @@ JointObj *new_joint(SysObj &s, const std::string &name, JKind k, std::shared_ptr
   auto j = std::make_unique<JointObj>();
   j->name = name; j->kind = k; j->link = link;
   s.sys->Add(link);
+  s.names.insert(name);
   s.joints.push_back(std::move(j));
   track_angle(*s.joints.back());  // the angle is measured from the pose at creation
   return s.joints.back().get();
@@ -294,10 +300,11 @@ double joint_value_of(const JointObj &j, const std::string &c) {
 }
 
 void capture_row(SysObj &s) {
-  std::vector<double> row{s.sys->GetChTime()};
+  // One flat buffer (8 bytes per value); growing it goes through the counting operator new, so a recording
+  // past the memory budget is a run error.
+  s.rows.push_back(s.sys->GetChTime());
   for (auto &r : s.recs)
-    for (auto &c : r.cols) row.push_back(r.is_body ? body_value_of(*r.body, c) : joint_value_of(*r.joint, c));
-  s.rows.push_back(std::move(row));
+    for (auto &c : r.cols) s.rows.push_back(r.is_body ? body_value_of(*r.body, c) : joint_value_of(*r.joint, c));
 }
 
 void start(SysObj &s) {
@@ -315,6 +322,9 @@ void do_step(SysObj &s) {
   if (flag) flag->failed = false;
   MarginGuard guard(s);  // Chrono reads the process-wide default margin when it binds a shape to the collision system
   try { s.sys->DoStepDynamics(s.dt); }
+  catch (const std::bad_alloc &e) {  // memory budget exhausted inside Chrono or Bullet: no solver hint
+    throw dslvm::Error("step failed at t = " + fmt(t0) + ": " + e.what());
+  }
   catch (const std::exception &e) {
     std::string hint = (s.integrator == "hht" || s.integrator == "newmark")
                            ? " (hint: hht and newmark need a direct solver and enough Newton iterations: solver(\"sparse_lu\", 1), newton(30, 1e-6, 1e-9))" : "";
@@ -684,8 +694,9 @@ void register_host(dslvm::Registry &r, Host &h) {
     if (!f) throw dslvm::Error("System.save_csv: cannot write '" + a[0].s + "'");
     for (size_t i = 0; i < s.header.size(); i++) f << (i ? "," : "") << s.header[i];
     f << "\n";
-    for (auto &row : s.rows) {
-      for (size_t i = 0; i < row.size(); i++) f << (i ? "," : "") << fmt12(row[i]);
+    const size_t w = s.header.size();
+    for (size_t r = 0; r + w <= s.rows.size(); r += w) {
+      for (size_t i = 0; i < w; i++) f << (i ? "," : "") << fmt12(s.rows[r + i]);
       f << "\n";
     }
     if (!f) throw dslvm::Error("System.save_csv: write failed for '" + a[0].s + "'");
@@ -767,7 +778,14 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "Joint", "reaction_z", {}, "float", [](void *p, Args &) { return Value::real(joint_value_of(J(p), "fz")); });
 }
 
-const char *usage = "usage: lmphysics --version | --notices | --dsl-schema [--json] | --dsl-signatures | [--dry-run] --dsl FILE [FILE ...]\n";
+const char *usage = "usage: lmphysics --version | --notices | --dsl-schema [--json] | --dsl-signatures | [--dry-run] --dsl FILE [FILE ...]\n"
+                    "environment: LMPHYSICS_MAX_MEMORY_MB  total memory budget in MiB (default 4096); a program that needs more\n"
+                    "             stops with a run error (exit 3) instead of allocating\n";
+
+// Bullet takes its memory from malloc by default; route it through the counting operator new/delete (Bullet is C++,
+// so an exceeded budget unwinds through it to the step's error handling).
+void *bullet_alloc(size_t n) { return ::operator new(n); }
+void bullet_free(void *p) { ::operator delete(p); }
 }  // namespace
 
 int main(int argc, char **argv) {
@@ -775,6 +793,7 @@ int main(int argc, char **argv) {
   _setmode(_fileno(stdout), _O_BINARY);
   _setmode(_fileno(stderr), _O_BINARY);
 #endif
+  cbtAlignedAllocSetCustom(bullet_alloc, bullet_free);  // before any Bullet object exists
   Host host;
   dslvm::Registry reg;
   register_host(reg, host);
@@ -798,6 +817,7 @@ int main(int argc, char **argv) {
   if (argc <= first || std::string(argv[first - 1]) != "--dsl") { std::cerr << usage; return 2; }
   for (int i = first; i < argc; i++)
     if (std::string(argv[i]).empty() || std::string(argv[i]).rfind("--", 0) == 0) { std::cerr << usage; return 2; }
+  if (!membudget::configure("lmphysics", "LMPHYSICS_MAX_MEMORY_MB")) { std::cerr << usage; return 2; }
   const std::string schema(reinterpret_cast<const char *>(lmphysics::embedded_schema), lmphysics::embedded_schema_size);
   dslvm::Context context;
   context.set("phys", &host);
@@ -805,10 +825,12 @@ int main(int argc, char **argv) {
   for (int i = first; i < argc; i++) {
     try { programs.push_back(dslvm::Program::load(dslvm::read_file(argv[i]), schema, reg)); }
     catch (const dslvm::Error &e) { return dslvm::report_error("load", e); }
+    catch (const std::exception &e) { return dslvm::report_error("load", dslvm::Error(e.what())); }
   }
   for (const auto &p : programs) {
     try { p.run(context, reg); }
     catch (const dslvm::Error &e) { return dslvm::report_error("run", e); }
+    catch (const std::exception &e) { return dslvm::report_error("run", dslvm::Error(e.what())); }  // budget in the VM
     dslvm::report_ok();
   }
   return 0;

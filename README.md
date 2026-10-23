@@ -106,6 +106,13 @@ cmake -S . -B build && cmake --build build
 Linux builds are fully static; macOS links only system libraries; Windows links the MinGW runtime
 statically. `lmphysics --notices` prints the license texts of everything inside.
 
+## Resource limits
+
+A program may use at most 4096 MiB in total (bodies, joints, recorded steps, Chrono and Bullet state,
+everything the host keeps); beyond that it stops with a run error (exit 3) naming the limit, instead
+of exhausting the machine. Set `LMPHYSICS_MAX_MEMORY_MB` to change it, e.g.
+`LMPHYSICS_MAX_MEMORY_MB=16384 lmscript long_run.lms`. Every recorded step costs 8 bytes per column.
+
 ## License
 
 MIT ([LICENSE](LICENSE)). Project Chrono is BSD-3-Clause, its bundled Bullet collision code is zlib,

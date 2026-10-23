@@ -186,6 +186,50 @@ mv "$WORK/det.csv" "$WORK/det2.csv"
 cmp -s "$WORK/det1.csv" "$WORK/det2.csv" || fail "contact CSV differs between two identical runs"
 ok "a recorded contact run is byte-identical on rerun"
 
+# Memory budget: a runaway loop stops with a run error (exit 3, message on stderr and in the JSON line)
+# instead of exhausting the machine. The fastest runaway here is the step recording (2048 columns, so
+# 16 KiB per step): a small budget everywhere; on Linux also the default 4096 MiB under a 6 GiB
+# address-space limit (ulimit only here, never in the host; ~30 s). Then a budget that the bodies fit
+# in but the first contact step does not: the failure inside Chrono/Bullet reaches the step's error.
+cat >"$WORK/runaway.lms" <<LMS
+p = _dsl_ cli="lmphysics";
+let s = phys.system("nsc");
+s.gravity(0.0, 0.0, 0.0);
+let a = s.sphere("a", 0.1, 1.0);
+let cols = "x";
+for (i in range(0, 11)) { cols = cols + "," + cols; }
+s.record("a", cols);
+while (true) { s.run(s.time() + 1.0); }
+end _dsl_
+savedsl(p, "$WORK/runaway.dslb");
+LMS
+"$LMSCRIPT" "$WORK/runaway.lms" >/dev/null || fail "runaway.lms compile"
+set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=64 "$HOST" --dsl "$WORK/runaway.dslb" 2>"$WORK/runaway.err")"; code=$?; set -e
+[ "$code" = 3 ] || fail "runaway loop under LMPHYSICS_MAX_MEMORY_MB=64: exit $code, expected 3 ($out)"
+echo "$out" | grep -q "memory budget exceeded" || fail "runaway loop: JSON lacks the budget message: $out"
+grep -q "LMPHYSICS_MAX_MEMORY_MB" "$WORK/runaway.err" || fail "runaway loop: no budget message on stderr"
+set +e; LMPHYSICS_MAX_MEMORY_MB=-5 "$HOST" --dsl "$WORK/runaway.dslb" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
+[ "$code" = 2 ] && grep -q "positive whole number" "$WORK/badenv.err" || fail "bad LMPHYSICS_MAX_MEMORY_MB: exit $code"
+cat >"$WORK/stepmem.lms" <<LMS
+p = _dsl_ cli="lmphysics";
+let s = phys.system("nsc");
+s.floor("f", "default");
+for (i in range(0, 20000)) { let b = s.sphere("b" + str(i), 0.1, 1.0).pos(float(i % 1000) * 0.3, float(i / 1000) * 0.3, 0.09).collide("default"); }
+s.step();
+end _dsl_
+savedsl(p, "$WORK/stepmem.dslb");
+LMS
+"$LMSCRIPT" "$WORK/stepmem.lms" >/dev/null || fail "stepmem.lms compile"
+set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=50 "$HOST" --dsl "$WORK/stepmem.dslb" 2>/dev/null)"; code=$?; set -e
+[ "$code" = 3 ] && echo "$out" | grep -q "step failed at t = 0: memory budget exceeded" || fail "budget exceeded inside a contact step: exit $code ($out)"
+if [ "$UNAME_S" = Linux ]; then
+  set +e; out="$(ulimit -v 6291456; "$HOST" --dsl "$WORK/runaway.dslb" 2>/dev/null)"; code=$?; set -e
+  [ "$code" = 3 ] && echo "$out" | grep -q "limit 4096 MiB" || fail "runaway loop with the default budget under ulimit -v 6 GiB: exit $code ($out)"
+  ok "memory budget: runaway recording stops at 64 MiB and at the default 4096 MiB (under ulimit -v 6 GiB); a step past it is a step error"
+else
+  ok "memory budget: runaway recording stops at LMPHYSICS_MAX_MEMORY_MB=64, a step past it is a step error (default-budget run is Linux-only)"
+fi
+
 set +e; "$HOST" --dsl "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"
 set +e; "$HOST" >/dev/null 2>&1; code=$?; set -e

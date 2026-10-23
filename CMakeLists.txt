@@ -30,7 +30,7 @@ file(WRITE "${GEN}/notices_embedded.hpp" "#pragma once\n#include <cstddef>\nname
 
 include(cmake/Chrono.cmake)
 
-add_executable(lmphysics cpp/main.cpp)
+add_executable(lmphysics cpp/main.cpp cpp/memory_budget.cpp)
 target_compile_definitions(lmphysics PRIVATE LMPHYSICS_VERSION="${PROJECT_VERSION}")
 target_include_directories(lmphysics PRIVATE cpp "${GEN}")
 target_link_libraries(lmphysics PRIVATE lmphysics_chrono)
