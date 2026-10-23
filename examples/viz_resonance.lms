@@ -1,0 +1,91 @@
+# Forced oscillator and resonance: a 1 kg cart on a rail, spring 100 N/m, damper 4 N s/m (damping ratio 0.2), driven by
+# F0 sin(w t) with F0 = 10 N. lmphysics applies the force as an expression in t (Body.force) and simulates 49 drive
+# frequencies from 4 to 16 rad/s; the steady-state amplitude is measured over the last 2 s and asserted against
+# F0 / sqrt((k - m w^2)^2 + (c w)^2). lmplot draws the resonance curve and three of the time histories.
+# Output: images/resonance.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+for (k in range(0, 49)) {
+  let w = 4.0 + 0.25 * float(k);
+  let s = phys.system("nsc");
+  s.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.002);
+  let wall = s.ground("wall");
+  let car = s.sphere("car", 0.1, 1000.0);
+  car.mass_props(1.0, 0.01, 0.01, 0.01);
+  car.force("10.0 * sin(" + str(w) + " * t)", "0.0", "0.0");
+  s.prismatic("rail", wall, car, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+  s.spring("k", wall, car, 100.0, 4.0, 0.0);
+  s.run(8.0);
+  let amp = 0.0;
+  while (s.time() < 10.0) {
+    s.step();
+    amp = max(amp, abs(car.x()));
+  }
+  let theory = 10.0 / sqrt((100.0 - w * w) * (100.0 - w * w) + 16.0 * w * w);
+  phys.assert_close(amp, theory, 0.02 * theory + 0.002);
+  phys.print(str(w) + " " + str(amp) + " " + str(theory));
+}
+let a = phys.system("nsc");
+a.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.002);
+let wall_a = a.ground("wall");
+let car_a = a.sphere("car", 0.1, 1000.0);
+car_a.mass_props(1.0, 0.01, 0.01, 0.01);
+car_a.force("10.0 * sin(6.0 * t)", "0.0", "0.0");
+a.prismatic("rail", wall_a, car_a, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+a.spring("k", wall_a, car_a, 100.0, 4.0, 0.0);
+a.record("car", "x");
+a.run(4.0);
+a.save_csv("build/examples/resonance_w6.csv");
+let b = phys.system("nsc");
+b.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.002);
+let wall_b = b.ground("wall");
+let car_b = b.sphere("car", 0.1, 1000.0);
+car_b.mass_props(1.0, 0.01, 0.01, 0.01);
+car_b.force("10.0 * sin(10.0 * t)", "0.0", "0.0");
+b.prismatic("rail", wall_b, car_b, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+b.spring("k", wall_b, car_b, 100.0, 4.0, 0.0);
+b.record("car", "x");
+b.run(4.0);
+b.save_csv("build/examples/resonance_w10.csv");
+let c = phys.system("nsc");
+c.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.002);
+let wall_c = c.ground("wall");
+let car_c = c.sphere("car", 0.1, 1000.0);
+car_c.mass_props(1.0, 0.01, 0.01, 0.01);
+car_c.force("10.0 * sin(14.0 * t)", "0.0", "0.0");
+c.prismatic("rail", wall_c, car_c, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+c.spring("k", wall_c, car_c, 100.0, 4.0, 0.0);
+c.record("car", "x");
+c.run(4.0);
+c.save_csv("build/examples/resonance_w14.csv");
+end _dsl_
+savedsl(sim, "build/viz_resonance-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/viz_resonance-sim.dslb;
+assert(r.code == 0);
+write_file("build/examples/resonance_curve.txt", r.stdout);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/resonance.png", 1100, 480);
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set title 'Resonance curve (damping ratio 0.2)'");
+plot.cmd("set xlabel 'drive frequency w [rad/s]'");
+plot.cmd("set ylabel 'steady-state amplitude [m]'");
+plot.cmd("set grid");
+plot.cmd("set yrange [0:0.32]");
+plot.cmd("set key top left box opaque");
+plot.cmd("plot 'build/examples/resonance_curve.txt' every ::0::48 using 1:3 with lines lw 4 lc rgb '#bbbbbb' title 'F0 / sqrt((k - m w^2)^2 + (c w)^2)', 'build/examples/resonance_curve.txt' every ::0::48 using 1:2 with points pt 7 ps 1 lc rgb '#d62728' title 'lmphysics'");
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Cart position under the drive'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'x [m]'");
+plot.cmd("set yrange [-0.3:0.45]");
+plot.cmd("set key top right box opaque");
+plot.cmd("plot 'build/examples/resonance_w6.csv' skip 1 using 1:2 with lines lw 2 lc rgb '#1f77b4' title 'w = 6 (below)', 'build/examples/resonance_w10.csv' skip 1 using 1:2 with lines lw 2 lc rgb '#d62728' title 'w = 10 (resonance)', 'build/examples/resonance_w14.csv' skip 1 using 1:2 with lines lw 2 lc rgb '#2ca02c' title 'w = 14 (above)'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/viz_resonance-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/viz_resonance-draw.dslb;
+assert(r.code == 0);
+println("wrote images/resonance.png");
