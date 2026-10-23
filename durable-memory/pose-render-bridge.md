@@ -7,3 +7,5 @@ Verified on 2026-10-23 against published lmphysics 0.1.1 and lmblender 0.3.6: bo
 The always-on test.sh bridge regression checks translation, quaternion order/handedness and normalization, OBJ topology, and rejection of missing, zero and oversized poses. The network-enabled gallery loop runs both complete examples on every platform and repeats the simulations to check CSV determinism. Regenerate images with examples/render-all.sh.
 
 The bridge covers box geometry; shape dimensions and materials remain explicit in each script. It exports selected snapshots, not motion interpolation or constraints. pose_point can transform body-local vertices for additional shapes.
+
+Full local test.sh passed all 19 checks with network gallery rendering enabled, including all 18 examples and 40 byte-identical CSVs on rerun. Both exact main-branch README autorun URLs also passed from fresh directories and reproduced the gallery PNG bytes.
