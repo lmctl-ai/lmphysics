@@ -1,5 +1,12 @@
 import "../examples/bridge/pose_obj.lms";
 row = {"b.x":1.0,"b.y":2.0,"b.z":3.0,"b.qw":1.0,"b.qx":0.0,"b.qy":0.0,"b.qz":0.0};
+# Negative modes are invoked separately by test.sh and must exit with an error.
+if (ARGV.len()>0) {
+  if (ARGV[0]=="missing") { pose_point({},"b",[0.0,0.0,0.0]); }
+  if (ARGV[0]=="zero") { row["b.qw"]=0.0; pose_point(row,"b",[0.0,0.0,0.0]); }
+  if (ARGV[0]=="oversized") { row["b.x"]=1000001.0; pose_point(row,"b",[0.0,0.0,0.0]); }
+  exit(0);
+}
 p = pose_point(row,"b",[2.0,3.0,4.0]);
 assert(p[0]==3.0 && p[1]==5.0 && p[2]==7.0);
 # 90 degrees around Z, deliberately non-unit: normalize without changing orientation.

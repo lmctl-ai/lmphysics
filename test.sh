@@ -75,7 +75,12 @@ ok "record_every thins the CSV (101 rows) and keeps the final state"
 
 # The CSV/OBJ pose bridge is pure lmscript: test it even without renderer/network access.
 timeout 30 "$LMSCRIPT" scripts/test-pose-bridge.lms >"$WORK/pose-bridge.log" 2>&1 || { cat "$WORK/pose-bridge.log" >&2; fail "pose bridge"; }
-ok "pose bridge preserves translation, quaternion orientation and OBJ topology"
+for bad_pose in missing zero oversized; do
+  if timeout 30 "$LMSCRIPT" scripts/test-pose-bridge.lms "$bad_pose" >"$WORK/pose-$bad_pose.log" 2>&1; then
+    fail "pose bridge accepted $bad_pose input"
+  fi
+done
+ok "pose bridge preserves translation, quaternion orientation and OBJ topology; rejects malformed poses"
 
 # Gallery: every image the README references exists and is a valid PNG/GIF; every linked example exists.
 img_ok() { # file
