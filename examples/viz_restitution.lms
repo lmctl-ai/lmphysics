@@ -1,33 +1,33 @@
 # A ball dropped from 1 m onto a floor with restitution 0.9, 0.7, 0.5 and 0.3 (NSC contact, 0.5 ms steps).
-# Higher e keeps the energy longer. Chrono applies the rebound one step late, so a bounce lands between e^2 and e^4
-# of the previous height (e = 0.5 here gives 0.07 m instead of 0.25 m); see durable-memory/04-numerics.md.
+# Higher e keeps the energy longer: with collision_margins(0, 0) each apex is e^2 times the previous height (0.81, 0.49,
+# 0.25 and 0.09 m for the first bounce). Chrono's default 3 cm contact envelope would apply the rebound a step late.
 # Output: images/restitution.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
 sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let r1 = phys.system("nsc");
-r1.material("ball", 0.3, 0.9).timestep(0.0005);
+r1.material("ball", 0.3, 0.9).timestep(0.0005).collision_margins(0.0, 0.0);
 r1.floor("floor", "ball");
 let b_r1 = r1.sphere("ball", 0.05, 800.0).pos(0.0, 0.0, 1.05).collide("ball");
 r1.record("ball", "z");
 r1.run(3.0);
 r1.save_csv("build/examples/restitution_r1.csv");
 let r2 = phys.system("nsc");
-r2.material("ball", 0.3, 0.7).timestep(0.0005);
+r2.material("ball", 0.3, 0.7).timestep(0.0005).collision_margins(0.0, 0.0);
 r2.floor("floor", "ball");
 let b_r2 = r2.sphere("ball", 0.05, 800.0).pos(0.0, 0.0, 1.05).collide("ball");
 r2.record("ball", "z");
 r2.run(3.0);
 r2.save_csv("build/examples/restitution_r2.csv");
 let r3 = phys.system("nsc");
-r3.material("ball", 0.3, 0.5).timestep(0.0005);
+r3.material("ball", 0.3, 0.5).timestep(0.0005).collision_margins(0.0, 0.0);
 r3.floor("floor", "ball");
 let b_r3 = r3.sphere("ball", 0.05, 800.0).pos(0.0, 0.0, 1.05).collide("ball");
 r3.record("ball", "z");
 r3.run(3.0);
 r3.save_csv("build/examples/restitution_r3.csv");
 let r4 = phys.system("nsc");
-r4.material("ball", 0.3, 0.3).timestep(0.0005);
+r4.material("ball", 0.3, 0.3).timestep(0.0005).collision_margins(0.0, 0.0);
 r4.floor("floor", "ball");
 let b_r4 = r4.sphere("ball", 0.05, 800.0).pos(0.0, 0.0, 1.05).collide("ball");
 r4.record("ball", "z");
