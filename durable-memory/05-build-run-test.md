@@ -7,7 +7,7 @@ scripts/sync-deps.sh && cmake -S . -B build -G Ninja && cmake --build build && .
 Measured (WSL2, 4 cores, g++ 11.4): clean build of Chrono core + host ~4 min (479 translation
 units); binary 9.8 MB static, stripped, no dynamic loader.
 
-`test.sh` checks (17 numbered groups; 7 programs: 3 tests + 4 examples, + the combo example when
+`test.sh` checks (18 numbered checks; 7 programs: 3 tests + 4 examples, + the combo example when
 lmplot or the network is available):
 1. SDK header and `third_party/` match their pins;
 2. build; `--version` is exactly `lmphysics 0.1.0`;

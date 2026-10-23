@@ -689,7 +689,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "System", "save_csv", {"string"}, "System", [](void *p, Args &a) {
     auto &s = S(p);
     start(s);
-    if (s.rows.back()[0] != s.sys->GetChTime()) capture_row(s);  // with record_every the final state is always written
+    if (s.rows[s.rows.size() - s.header.size()] != s.sys->GetChTime()) capture_row(s);  // with record_every the final state is always written
     std::ofstream f(a[0].s, std::ios::binary);
     if (!f) throw dslvm::Error("System.save_csv: cannot write '" + a[0].s + "'");
     for (size_t i = 0; i < s.header.size(); i++) f << (i ? "," : "") << s.header[i];

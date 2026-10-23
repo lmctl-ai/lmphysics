@@ -21,7 +21,7 @@ How it is counted here:
 - Bullet takes memory from `malloc` by default; `main` installs `cbtAlignedAllocSetCustom` with
   `::operator new`/`delete` before any Bullet object exists (Bullet's aligned allocator uses the
   same hook on all our platforms: `BT_HAS_ALIGNED_ALLOCATOR` is MSVC-only).
-- Recorded steps are one flat `std::deque<double>` (8 bytes per value, grown in 512-byte blocks,
+- Recorded rows (every step, or every n-th with `System.record_every(n)`) are one flat `std::deque<double>` (8 bytes per value, grown in 512-byte blocks,
   no 3x peak of a doubling vector); before this, one `std::vector` per row cost ~56 bytes per step
   for a single column.
 - Exceptions inside `DoStepDynamics` (Chrono and Bullet are C++, no C frames or `noexcept` on the
