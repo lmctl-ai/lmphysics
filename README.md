@@ -90,15 +90,15 @@
 
 | ![four_bar_linkage](docs/images/four_bar_linkage.png) | ![gear_train](docs/images/gear_train.png) |
 | --- | --- |
-| Crank-rocker four-bar linkage and its coupler curve; rocker limits match the law of cosines.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/four_bar_linkage.lms` | Gear train with an idler: 4 times slower, 4 times the torque, 80 W in = 80 W out. **Needs lmphysics v0.1.2** (in `main`, not yet released).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/gear_train.lms` |
+| Crank-rocker four-bar linkage and its coupler curve; rocker limits match the law of cosines.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/four_bar_linkage.lms` | Gear train with an idler: 4 times slower, 4 times the torque, 80 W in = 80 W out.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/gear_train.lms` |
 
 | ![cardan_joint](docs/images/cardan_joint.png) | ![quarter_car](docs/images/quarter_car_model.png) |
 | --- | --- |
-| One universal joint makes a steady shaft wobble between w cos b and w / cos b. **Needs lmphysics v0.1.2** (in `main`, not yet released).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/cardan_joint.lms` | The quarter-car suspension model (lmdraw). **Needs lmphysics v0.1.2** (in `main`, not yet released).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/quarter_car.lms` |
+| One universal joint makes a steady shaft wobble between w cos b and w / cos b.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/cardan_joint.lms` | The quarter-car suspension model (lmdraw).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/quarter_car.lms` |
 
 | ![quarter_car](docs/images/quarter_car.png) | ![slider_crank](docs/images/slider_crank.png) |
 | --- | --- |
-| Over a speed bump: soft damping floats, hard damping jolts; nine dampers swept. **Needs lmphysics v0.1.2** (in `main`, not yet released).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/quarter_car.lms` | Slider-crank driven by a motor: slider position against the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/slider_crank.lms` |
+| Over a speed bump: soft damping floats, hard damping jolts; nine dampers swept.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/quarter_car.lms` | Slider-crank driven by a motor: slider position against the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/slider_crank.lms` |
 
 | ![viz_crank_snapshots](docs/images/crank_snapshots.png) |  |
 | --- | --- |
@@ -109,12 +109,12 @@
 
 | ![projectile_drag](docs/images/projectile_drag.png) | ![viz_projectile](docs/images/projectile.png) |
 | --- | --- |
-| A baseball hit at 45 m/s: air drag cuts 206 m to 111 m and the best angle to 40 degrees. **Needs lmphysics v0.1.2** (in `main`, not yet released).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/projectile_drag.lms` | Projectile range against launch angle in vacuum: 44 simulations, 45 degrees wins.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_projectile.lms` |
+| A baseball hit at 45 m/s: air drag cuts 206 m to 111 m and the best angle to 40 degrees.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/projectile_drag.lms` | Projectile range against launch angle in vacuum: 44 simulations, 45 degrees wins.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_projectile.lms` |
 
 
 Every picture is made by the script named under it: it runs the simulation with lmphysics, draws with [lmplot](https://github.com/lmctl-ai/lmplot), [lmdraw](https://github.com/lmctl-ai/lmdraw), [lmcad](https://github.com/lmctl-ai/lmcad) or [lmblender](https://github.com/lmctl-ai/lmblender) and writes `images/` into the current directory. `examples/render-all.sh` regenerates `docs/images/`. The Cycles renders pass recorded positions and quaternions through the [portable CSV-to-OBJ pose bridge](examples/bridge/README.md) (boxes, spheres, cylinders) to [lmblender](https://github.com/lmctl-ai/lmblender).
 
-**Quick start:** `npm i -g @lmctl-ai/lmctl`, then paste any `lmctl autorun` line above into a terminal; it downloads lmphysics and the drawing host and writes the picture to `images/`. Five pictures marked *needs v0.1.2* use API that is in `main` but not yet in a release (`gear`, `universal`, linear motors, `spring_at`, `Body.drag`); until v0.1.2 is tagged, build lmphysics from source and put `build/` on `PATH` (lmscript prefers a `lmphysics` found on `PATH`).
+**Quick start:** `npm i -g @lmctl-ai/lmctl`, then paste any `lmctl autorun` line above into a terminal; it downloads lmphysics and the drawing host and writes the picture to `images/`. The gear train, Cardan joint, quarter-car, damper sweep and baseball-drag pictures use API added in v0.1.2 (`gear`, `universal`, linear motors, `spring_at`, `Body.drag`).
 
 It is a scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html) `_dsl_` block and run it. No Python, no data files, no shared libraries.
 
