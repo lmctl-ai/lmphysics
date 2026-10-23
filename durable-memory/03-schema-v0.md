@@ -32,4 +32,21 @@ Conventions
   while a linear solver (sparse_lu/sparse_qr/minres, e.g. preset by `hht`) is active (Chrono returns garbage:
   a ball on the floor ended at z = 88 km).
 
-Counts: `Phys` 4, `System` 29, `Body` 22, `Joint` 7 distinct method names (see the JSON).
+Added in 0.1.2 (unreleased until tagged; examples that use these say "needs v0.1.2"):
+- `spring_at(name, A, B, ax,ay,az, bx,by,bz, k, c, rest)`: spring-damper between two body-fixed points
+  given in world coordinates at creation (suspensions, off-centre springs).
+- A spring with rest length > 0 whose anchor points coincide is an error at the first step (Chrono would push
+  along an arbitrary x axis). Zero-rest-length springs between coincident centres stay legal (no force there).
+- `Body.drag(c1, c2)`: F = -(c1 + c2 |v|) v at the centre of mass, evaluated from the state at the start of
+  each step through the body's force accumulator (explicit in the step; error O(dt)).
+- Joints: `cylindrical` (lock formulation, axis z of the frame), `universal(name,A,B,p, a, b)` (cross axis a fixed
+  in A, b fixed in B, must be perpendicular; `ChLinkUniversal`), `gear(name, A, B, ratio, axis)` (`ChLinkLockGear`
+  with both shafts through the body centres along a world axis; B turns at -ratio times A; each gear also needs
+  its own revolute/motor for its shaft; phase enforced).
+- Motors: `motor_torque` (rotational, torque expression), `motor_position`, `motor_linear_speed`, `motor_force`
+  (Chrono linear motors with prismatic guide, B moves along the axis relative to A; built with the bodies swapped
+  like the rotational motors).
+- Joint columns: `travel` (signed displacement of B along the joint axis since creation; linear motors report
+  `GetMotorPos`), `effort` (signed motor torque or force; error on non-motor joints).
+
+Counts: `Phys` 4, `System` 39, `Body` 25, `Joint` 9 distinct method names (see the JSON).

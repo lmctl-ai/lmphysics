@@ -212,6 +212,55 @@
             "returns": "Joint"
           }
         ],
+        "cylindrical": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "universal": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "gear": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
         "lock": [
           {
             "params": [
@@ -267,6 +316,25 @@
             "returns": "Joint"
           }
         ],
+        "spring_at": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Joint"
+          }
+        ],
         "motor_speed": [
           {
             "params": [
@@ -285,6 +353,74 @@
           }
         ],
         "motor_angle": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "string"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "motor_torque": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "string"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "motor_position": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "string"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "motor_linear_speed": [
+          {
+            "params": [
+              "string",
+              "Body",
+              "Body",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "string"
+            ],
+            "returns": "Joint"
+          }
+        ],
+        "motor_force": [
           {
             "params": [
               "string",
@@ -409,6 +545,15 @@
               "string",
               "string",
               "string"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "drag": [
+          {
+            "params": [
+              "float",
+              "float"
             ],
             "returns": "Body"
           }
@@ -563,6 +708,18 @@
           }
         ],
         "angle": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "travel": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "effort": [
           {
             "params": [],
             "returns": "float"

@@ -1,0 +1,112 @@
+# Drag, off-centre springs, linear and torque motors, gears, universal and cylindrical joints.
+out = ARGV.len() > 0 ? ARGV[0] : "build/actuators.dslb";
+p = _dsl_ cli="lmphysics";
+# Quadratic drag: terminal speed sqrt(m g / c2) = sqrt(9.81 / 0.1) for a 1 kg ball.
+let a = phys.system("nsc");
+a.integrator("trapezoidal").timestep(0.001);
+let ball = a.sphere("ball", 0.1, 1000.0).mass_props(1.0, 0.004, 0.004, 0.004).drag(0.0, 0.1);
+a.run(12.0);
+phys.assert_close(ball.vz(), -sqrt(98.1), 0.001);
+# Linear drag: v(t) = (m g / c)(1 - exp(-c t / m)).
+let b = phys.system("nsc");
+b.integrator("trapezoidal").timestep(0.0005);
+let bead = b.sphere("bead", 0.1, 1000.0).mass_props(1.0, 0.004, 0.004, 0.004).drag(2.0, 0.0);
+b.run(1.0);
+phys.assert_close(bead.vz(), -4.905 * (1.0 - pow(2.718281828459045, -2.0)), 0.005);
+# spring_at: a 1 kg body hung from a ground point by a k = 100 spring anchored 0.1 m above its centre.
+let c = phys.system("nsc");
+c.integrator("trapezoidal").timestep(0.001);
+let hook = c.ground("hook");
+let weight = c.box("weight", 0.2, 0.2, 0.2, 125.0).pos(0.0, 0.0, 0.8);
+c.prismatic("guide", hook, weight, 0.0, 0.0, 0.8, 0.0, 0.0, 1.0);
+let sp = c.spring_at("sp", hook, weight, 0.0, 0.0, 2.0, 0.0, 0.0, 0.9, 100.0, 8.0, 1.0);
+c.run(15.0);
+phys.assert_close(sp.length(), 1.0 + 9.81 / 100.0, 0.0005);
+phys.assert_close(weight.z(), 2.0 - 1.0981 - 0.1, 0.0005);
+phys.assert_close(sp.force(), -9.81, 0.01);   # Chrono sign: negative in tension
+# motor_position: travel follows 0.2 sin t; the motor force on a 2 kg slider is m a = -0.4 sin t.
+let d = phys.system("nsc");
+d.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let base = d.ground("base");
+let slider = d.box("slider", 0.2, 0.2, 0.2, 250.0);
+let pm = d.motor_position("pm", base, slider, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, "0.2 * sin(t)");
+d.run(1.0);
+phys.assert_close(slider.x(), 0.2 * sin(1.0), 0.0001);
+phys.assert_close(pm.travel(), 0.2 * sin(1.0), 0.0001);
+phys.assert_close(pm.effort(), -0.4 * sin(1.0), 0.01);
+# motor_linear_speed and motor_force.
+let e = phys.system("nsc");
+e.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let rail = e.ground("rail");
+let cart = e.box("cart", 0.2, 0.2, 0.2, 250.0);
+let cartb = e.box("cartb", 0.2, 0.2, 0.2, 250.0).pos(0.0, 1.0, 0.0);
+let sm = e.motor_linear_speed("sm", rail, cart, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, "0.5");
+let fm = e.motor_force("fm", rail, cartb, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, "3.0");
+e.run(2.0);
+phys.assert_close(cart.z(), 1.0, 0.001);
+phys.assert_close(sm.travel(), 1.0, 0.001);
+phys.assert_close(cartb.x(), 3.0 * 4.0 / (2.0 * 2.0), 0.001);
+phys.assert_close(fm.effort(), 3.0, 0.000001);
+# motor_torque: 2 N m on a cube with Izz = 1 gives w = 2 t.
+let f = phys.system("nsc");
+f.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let frame = f.ground("frame");
+let rotor = f.box("rotor", 1.0, 1.0, 1.0, 6.0);
+let tm = f.motor_torque("tm", frame, rotor, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, "2.0");
+f.run(1.5);
+phys.assert_close(rotor.wz(), 3.0, 0.001);
+phys.assert_close(tm.angle(), 2.25, 0.002);
+phys.assert_close(tm.effort(), 2.0, 0.000001);
+# Prismatic travel: a 3 N force on a 2 kg block.
+let g = phys.system("nsc");
+g.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let wall = g.ground("wall");
+let blk = g.box("blk", 0.2, 0.2, 0.2, 250.0).force("3.0", "0.0", "0.0");
+let pr = g.prismatic("pr", wall, blk, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+g.run(2.0);
+phys.assert_close(pr.travel(), 3.0, 0.001);
+# Gear pair: pinion driven at 2 rad/s, ratio 0.5 (radius 0.1 / 0.2): the wheel turns at -1 rad/s.
+let h = phys.system("nsc");
+h.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let hub = h.ground("hub");
+let pinion = h.cylinder("pinion", 0.1, 0.05, 1000.0).rot_axis(1.0, 0.0, 0.0, 1.5707963267948966);
+let wheel = h.cylinder("wheel", 0.2, 0.05, 1000.0).pos(0.3, 0.0, 0.0).rot_axis(1.0, 0.0, 0.0, 1.5707963267948966);
+h.motor_speed("drive", hub, pinion, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, "2.0");
+let axle = h.revolute("axle", hub, wheel, 0.3, 0.0, 0.0, 0.0, 0.0, 1.0);
+h.gear("mesh", pinion, wheel, 0.5, 0.0, 0.0, 1.0);
+h.run(1.0);
+phys.assert_close(wheel.wz(), -1.0, 0.002);
+phys.assert_close(axle.angle(), -1.0, 0.003);
+# Universal (Cardan) joint at 30 degrees: the driven shaft speed swings between w cos(b) and w / cos(b).
+let u = phys.system("nsc");
+u.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").solver("psor", 200).timestep(0.0005);
+let mount = u.ground("mount");
+let s1 = u.box("s1", 0.4, 0.05, 0.05, 1000.0).pos(-0.2, 0.0, 0.0);
+let s2 = u.box("s2", 0.4, 0.05, 0.05, 1000.0).pos(0.2 * 0.8660254037844387, 0.2 * 0.5, 0.0).rot_axis(0.0, 0.0, 1.0, 0.5235987755982988);
+u.motor_speed("in", mount, s1, -0.2, 0.0, 0.0, 1.0, 0.0, 0.0, "2.0");
+let outj = u.revolute("out", mount, s2, 0.2 * 0.8660254037844387, 0.2 * 0.5, 0.0, 0.8660254037844387, 0.5, 0.0);
+u.universal("cardan", s1, s2, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, -0.5, 0.8660254037844387, 0.0);
+let wmax = 0.0;
+let wmin = 100.0;
+for (k in range(0, 4000)) {
+  u.step();
+  let w = s2.wx() * 0.8660254037844387 + s2.wy() * 0.5;
+  if (k > 400) {
+    wmax = max(wmax, w);
+    wmin = min(wmin, w);
+  }
+}
+phys.assert_close(wmax, 2.0 / 0.8660254037844387, 0.01);
+phys.assert_close(wmin, 2.0 * 0.8660254037844387, 0.01);
+# Cylindrical joint: sliding and spinning are both free.
+let v = phys.system("nsc");
+v.integrator("trapezoidal").timestep(0.001);
+let pole = v.ground("pole");
+let collar = v.cylinder("collar", 0.1, 0.1, 1000.0).rot_axis(1.0, 0.0, 0.0, 1.5707963267948966).omega(0.0, 0.0, 3.0);
+let cj = v.cylindrical("cj", pole, collar, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
+v.run(1.0);
+phys.assert_close(collar.z(), -9.81 / 2.0, 0.001);
+phys.assert_close(collar.wz(), 3.0, 0.0001);
+phys.assert_close(cj.travel(), -9.81 / 2.0, 0.001);
+end _dsl_
+savedsl(p, out);

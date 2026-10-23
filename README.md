@@ -98,9 +98,12 @@ gravity `(0, 0, -9.81)` by default; lengths in m, masses in kg, angles in rad.
 | `gravity(x,y,z)` `timestep(dt)` `integrator(name)` `solver(name, iters)` `newton(iters, rtol, atol)` `hht_alpha(a)` | numerics |
 | `material(name, friction, restitution)` `stiffness(name, young, poisson)` | contact materials (`"default"` always exists) |
 | `ground(name)` `box(name, sx,sy,sz, density)` `sphere(name, r, density)` `cylinder(name, r, h, density)` `floor(name, material)` | bodies (cylinder axis is local y; `floor` is a fixed collision slab with its top at z = 0) |
-| `revolute` `prismatic` (`name, A, B, px,py,pz, ax,ay,az`) `lock` `spherical` (`name, A, B, px,py,pz`) `distance` (`name, A, B, ax,ay,az, bx,by,bz`) | joints between bodies A and B; points and axes in world coordinates at creation |
-| `spring(name, A, B, k, c, rest)` | linear spring-damper between the body centres |
-| `motor_speed(name, A, B, px,py,pz, ax,ay,az, "expr(t)")` `motor_angle(...)` | rotational motor, speed or angle given as an expression |
+| `revolute` `prismatic` `cylindrical`¹ (`name, A, B, px,py,pz, ax,ay,az`) `lock` `spherical` (`name, A, B, px,py,pz`) `distance` (`name, A, B, ax,ay,az, bx,by,bz`) | joints between bodies A and B; points and axes in world coordinates at creation |
+| `universal(name, A, B, px,py,pz, ax,ay,az, bx,by,bz)`¹ | Cardan joint: cross axis a fixed in A, b fixed in B (perpendicular) |
+| `gear(name, A, B, ratio, ax,ay,az)`¹ | spur gear pair on shafts through the body centres: B turns at -ratio times A (ratio = radius A / radius B); each gear keeps its own revolute or motor |
+| `spring(name, A, B, k, c, rest)` `spring_at(name, A, B, ax,ay,az, bx,by,bz, k, c, rest)`¹ | linear spring-damper between the body centres, or between two body-fixed points |
+| `motor_speed(name, A, B, px,py,pz, ax,ay,az, "expr(t)")` `motor_angle(...)` `motor_torque(...)`¹ | rotational motor: speed, angle or torque given as an expression |
+| `motor_position(...)`¹ `motor_linear_speed(...)`¹ `motor_force(...)`¹ (same arguments) | linear motor: B slides along the axis relative to A |
 | `record(name, "col,col")` `step()` `run(t_end)` `save_csv(path)` | fixed-step integration and logging (one CSV row per step) |
 | `record_every(n)` | keep every n-th step (the last state is always written) |
 | `collision_margins(envelope, margin)` | NSC only: `(0, 0)` makes restitution exact (apex = e^2 h) but stacks unstable; default is Chrono's 3 cm / 1 cm |
@@ -108,10 +111,12 @@ gravity `(0, 0, -9.81)` by default; lengths in m, masses in kg, angles in rad.
 | `time()` `energy()` `contacts()` | state queries |
 
 `Body`: `pos(x,y,z)` `vel(x,y,z)` `rot_axis(ax,ay,az,angle)` `omega(x,y,z)` `fixed(bool)`
-`mass_props(m, ixx,iyy,izz)` `collide(material)`, `force("fx(t)","fy(t)","fz(t)")` and `torque(...)` (world-frame loads as expressions in t), and readers `mass x y z vx vy vz wx wy wz lx ly lz speed ke`
+`mass_props(m, ixx,iyy,izz)` `collide(material)`, `force("fx(t)","fy(t)","fz(t)")` and `torque(...)` (world-frame loads as expressions in t), `drag(c1, c2)`¹ (air drag F = -(c1 + c2 |v|) v), and readers `mass x y z vx vy vz wx wy wz lx ly lz speed ke`
 (`l*` is angular momentum about the centre, world frame; `ke` kinetic energy).
-`Joint`: `angle` (rotation of B about the joint axis since creation, unwrapped) `length` `force`
-(spring force, otherwise reaction magnitude) `torque` and `reaction_x/y/z` (force on B, world frame).
+`Joint`: `angle` (rotation of B about the joint axis since creation, unwrapped) `travel`¹ (slide of B along the axis) `length` `force`
+(spring force, negative in tension, otherwise reaction magnitude) `torque` `effort`¹ (signed motor torque or force) and `reaction_x/y/z` (force on B, world frame).
+
+¹ New in v0.1.2 (in `main`, not yet in a release; `@latest` gets it once v0.1.2 is tagged).
 Recorded body poses also include `qw qx qy qz` (Hamilton quaternions, scalar first). Record columns are the same names, joints also `fx fy fz tx ty tz`. Schema and rules:
 [durable-memory/03-schema-v0.md](durable-memory/03-schema-v0.md).
 

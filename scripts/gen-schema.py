@@ -5,7 +5,7 @@ import json, pathlib, re
 root = pathlib.Path(__file__).resolve().parent.parent
 src = (root / "cpp/main.cpp").read_text()
 types = {}
-for m in re.finditer(r'method\(r, "(\w+)", "(\w+)", \{([^}]*)\}, "(\w+)"', src):
+for m in re.finditer(r'method\(r, "(\w+)", "(\w+)", \{([^}]*)\},\s*"(\w+)"', src):
     t, n, ps, rt = m.groups()
     params = [p.strip().strip('"') for p in ps.split(",") if p.strip()]
     types.setdefault(t, {"methods": {}})["methods"].setdefault(n, []).append({"params": params, "returns": rt})

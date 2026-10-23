@@ -175,7 +175,15 @@ expect_error matredefine 'let s = phys.system("nsc"); s.material("m", 0.5, 0.0);
 expect_error diverged 'let s = phys.system("nsc"); s.gravity(0.0, 0.0, 0.0); let g = s.ground("g"); let a = s.sphere("a", 0.1, 1.0).pos(1.0, 0.0, 0.0); let m = s.motor_speed("m", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, "sqrt(-1)"); s.run(0.1);' "diverged: body 'a'"
 expect_error singular 'let s = phys.system("nsc"); s.integrator("hht"); let g = s.ground("g"); let a = s.box("a", 1.0, 0.1, 0.1, 100.0).pos(0.5, 0.0, 0.0); let r1 = s.revolute("r1", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); let r2 = s.revolute("r2", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); s.step();' "factorization failed"
 expect_error nsc_direct 'let s = phys.system("nsc"); s.integrator("hht"); s.floor("f", "default"); let b = s.sphere("b", 0.1, 500.0).pos(0.0, 0.0, 0.3).collide("default"); s.run(1.0);' "nsc contact needs a complementarity solver"
-ok "errors stop the program with exit 3 and a clear message (32 cases)"
+expect_error spring_coincide 'let s = phys.system("nsc"); let a = s.sphere("a", 0.1, 1.0); let b = s.sphere("b", 0.1, 1.0); let k = s.spring("k", a, b, 10.0, 0.0, 0.5); s.step();' "anchor points coincide"
+expect_error springat_same 'let s = phys.system("nsc"); let g = s.ground("g"); let a = s.sphere("a", 0.1, 1.0); let k = s.spring_at("k", g, a, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 10.0, 0.0, 0.5);' "anchor points coincide"
+expect_error drag_neg 'let s = phys.system("nsc"); let a = s.sphere("a", 0.1, 1.0).drag(-1.0, 0.0);' ">= 0"
+expect_error drag_fixed 'let s = phys.system("nsc"); let g = s.ground("g"); g.drag(1.0, 0.0);' "is fixed"
+expect_error universal_axes 'let s = phys.system("nsc"); let g = s.ground("g"); let a = s.sphere("a", 0.1, 1.0); let u = s.universal("u", g, a, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0);' "perpendicular"
+expect_error gear_coaxial 'let s = phys.system("nsc"); let a = s.sphere("a", 0.1, 1.0); let b = s.sphere("b", 0.1, 1.0).pos(0.0, 0.0, 1.0); let q = s.gear("q", a, b, 2.0, 0.0, 0.0, 1.0);' "shafts coincide"
+expect_error gear_ratio 'let s = phys.system("nsc"); let a = s.sphere("a", 0.1, 1.0); let b = s.sphere("b", 0.1, 1.0).pos(1.0, 0.0, 0.0); let q = s.gear("q", a, b, 0.0, 0.0, 0.0, 1.0);' "ratio must be positive"
+expect_error effort_nomotor 'let s = phys.system("nsc"); let g = s.ground("g"); let a = s.sphere("a", 0.1, 1.0); let j = s.revolute("j", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); s.record("j", "effort");' "not one"
+ok "errors stop the program with exit 3 and a clear message (40 cases)"
 
 # Determinism without lmplot: a contact run that records every step gives byte-identical CSV twice.
 cat >"$WORK/det.lms" <<LMS

@@ -27,9 +27,16 @@
 #include "chrono/physics/ChContactMaterialSMC.h"
 #include "chrono/physics/ChLinkDistance.h"
 #include "chrono/physics/ChLinkLock.h"
+#include "chrono/physics/ChLinkLockGear.h"
+#include "chrono/physics/ChLinkMotorLinear.h"
+#include "chrono/physics/ChLinkMotorLinearForce.h"
+#include "chrono/physics/ChLinkMotorLinearPosition.h"
+#include "chrono/physics/ChLinkMotorLinearSpeed.h"
 #include "chrono/physics/ChLinkMotorRotation.h"
 #include "chrono/physics/ChLinkMotorRotationAngle.h"
 #include "chrono/physics/ChLinkMotorRotationSpeed.h"
+#include "chrono/physics/ChLinkMotorRotationTorque.h"
+#include "chrono/physics/ChLinkUniversal.h"
 #include "chrono/physics/ChLinkTSDA.h"
 #include "chrono/physics/ChSystemNSC.h"
 #include "chrono/physics/ChSystemSMC.h"
@@ -75,16 +82,18 @@ struct BodyObj {
   Shape shape = Shape::None;
   double d[3] = {0, 0, 0};  // box lengths, sphere radius, cylinder radius + height
   bool collide = false;
+  double drag_lin = 0, drag_quad = 0;  // Body.drag: F = -(drag_lin + drag_quad |v|) v
   SysObj *sys = nullptr;
 };
 
-enum class JKind { Lock, Revolute, Prismatic, Spherical, Distance, Spring, Motor };
+enum class JKind { Lock, Revolute, Prismatic, Spherical, Distance, Spring, Motor, LinearMotor, Cylindrical, Universal, Gear };
 struct JointObj {
   std::string name;
   JKind kind = JKind::Lock;
   std::shared_ptr<ch::ChLinkBase> link;
   std::shared_ptr<ch::ChLinkTSDA> tsda;
   std::shared_ptr<ch::ChLinkMotorRotation> motor;  // motors are built with the bodies swapped (Chrono turns body 1 against body 2)
+  std::shared_ptr<ch::ChLinkMotorLinear> lmotor;  // linear motors likewise
   double k = 0, rest = 0;       // spring data for energy()
   double angle = 0, prev = 0;   // unwrapped relative rotation about the joint axis
   bool angle_init = false;
@@ -282,8 +291,9 @@ double body_value_of(const BodyObj &bo, const std::string &c) {
 }
 
 double joint_value_of(const JointObj &j, const std::string &c) {
-  ch::ChWrenchd w = j.motor ? j.link->GetReaction1() : j.link->GetReaction2();
-  ch::ChFramed f2 = j.motor ? j.link->GetFrame1Abs() : j.link->GetFrame2Abs();
+  const bool swapped = j.motor || j.lmotor;
+  ch::ChWrenchd w = swapped ? j.link->GetReaction1() : j.link->GetReaction2();
+  ch::ChFramed f2 = swapped ? j.link->GetFrame1Abs() : j.link->GetFrame2Abs();
   if (c == "fx" || c == "fy" || c == "fz") {
     ch::ChVector3d f = f2.TransformDirectionLocalToParent(w.force);
     return c == "fx" ? f.x() : c == "fy" ? f.y() : f.z();
@@ -293,10 +303,20 @@ double joint_value_of(const JointObj &j, const std::string &c) {
     return c == "tx" ? t.x() : c == "ty" ? t.y() : t.z();
   }
   if (c == "angle") return j.angle;
+  if (c == "travel") {  // signed displacement of B along the joint axis since creation
+    if (j.lmotor) return j.lmotor->GetMotorPos();
+    ch::ChFramed f1 = j.link->GetFrame1Abs(), f = j.link->GetFrame2Abs();
+    return (f.GetPos() - f1.GetPos()).Dot(f1.GetRotMat().GetAxisZ());
+  }
+  if (c == "effort") {  // signed motor torque (rotational) or force (linear)
+    if (j.motor) return j.motor->GetMotorTorque();
+    if (j.lmotor) return j.lmotor->GetMotorForce();
+    throw dslvm::Error("record: column 'effort' needs a motor, '" + j.name + "' is not one");
+  }
   if (c == "length") return (j.link->GetFrame2Abs().GetPos() - j.link->GetFrame1Abs().GetPos()).Length();
   if (c == "force") return j.tsda ? j.tsda->GetForce() : w.force.Length();
   if (c == "torque") return w.torque.Length();
-  throw dslvm::Error("record: unknown joint column '" + c + "' (fx fy fz tx ty tz angle length force torque)");
+  throw dslvm::Error("record: unknown joint column '" + c + "' (fx fy fz tx ty tz angle travel length force torque effort)");
 }
 
 void capture_row(SysObj &s) {
@@ -307,10 +327,32 @@ void capture_row(SysObj &s) {
     for (auto &c : r.cols) s.rows.push_back(r.is_body ? body_value_of(*r.body, c) : joint_value_of(*r.joint, c));
 }
 
+// A spring whose two anchor points coincide has no direction: with a rest length > 0 Chrono would push along an
+// arbitrary axis (x). A zero-rest-length spring has no force there and is fine.
+void check_springs(SysObj &s, const char *when) {
+  for (auto &j : s.joints)
+    if (j->tsda && j->rest > 0 && !((j->tsda->GetBody1()->TransformPointLocalToParent(j->tsda->GetPoint1Rel()) -
+                       j->tsda->GetBody2()->TransformPointLocalToParent(j->tsda->GetPoint2Rel())).Length() > 1e-9))
+      throw dslvm::Error(std::string(when) + "spring '" + j->name + "': its two anchor points coincide, so a spring with a rest length has no direction"
+                         " (move the bodies apart, or anchor it off-centre with spring_at)");
+}
+
 void start(SysObj &s) {
   if (s.started) return;
+  check_springs(s, "");
   s.started = true;
   capture_row(s);
+}
+
+// Body.drag: velocity-dependent loads, evaluated from the state at the start of each step.
+void apply_drag(SysObj &s) {
+  for (auto &bo : s.bodies) {
+    if (bo->drag_lin == 0 && bo->drag_quad == 0) continue;
+    auto &b = *bo->b;
+    ch::ChVector3d v = b.GetPosDt();
+    b.EmptyAccumulators();
+    b.AccumulateForce(-(bo->drag_lin + bo->drag_quad * v.Length()) * v, b.GetPos(), false);
+  }
 }
 
 bool finite3(const ch::ChVector3d &v) { return std::isfinite(v.x()) && std::isfinite(v.y()) && std::isfinite(v.z()); }
@@ -321,6 +363,7 @@ void do_step(SysObj &s) {
   auto *flag = dynamic_cast<SolverFailure *>(s.sys->GetSolver().get());
   if (flag) flag->failed = false;
   MarginGuard guard(s);  // Chrono reads the process-wide default margin when it binds a shape to the collision system
+  apply_drag(s);
   try { s.sys->DoStepDynamics(s.dt); }
   catch (const std::bad_alloc &e) {  // memory budget exhausted inside Chrono or Bullet: no solver hint
     throw dslvm::Error("step failed at t = " + fmt(t0) + ": " + e.what());
@@ -347,6 +390,7 @@ void do_step(SysObj &s) {
       throw dslvm::Error(at + "the simulation diverged: body '" + bo->name +
                          "' has a non-finite position or velocity (check motor expressions, stiffness and the timestep)");
   }
+  check_springs(s, at.c_str());
   for (auto &j : s.joints) track_angle(*j);
   if (++s.steps % s.every == 0) capture_row(s);
 }
@@ -590,6 +634,48 @@ void register_host(dslvm::Registry &r, Host &h) {
          lock_joint("System.revolute", JKind::Revolute, [] { return chrono_types::make_shared<ch::ChLinkLockRevolute>(); }));
   method(r, "System", "prismatic", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float"}, "Joint",
          lock_joint("System.prismatic", JKind::Prismatic, [] { return chrono_types::make_shared<ch::ChLinkLockPrismatic>(); }));
+  method(r, "System", "cylindrical", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float"}, "Joint",
+         lock_joint("System.cylindrical", JKind::Cylindrical, [] { return chrono_types::make_shared<ch::ChLinkLockCylindrical>(); }));
+  // Cardan joint: B's rotation about axis a (fixed in A) and about axis b (fixed in B) are free; a and b must be perpendicular.
+  method(r, "System", "universal", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float", "float", "float", "float"},
+         "Joint", [joint_common](void *p, Args &a) {
+    auto &s = S(p);
+    const char *who = "System.universal";
+    auto [x, y] = joint_common(s, a, who);
+    for (int i = 3; i < 12; i++) finite(who, a[i].f);
+    ch::ChVector3d ax = vec(a, 6), bx = vec(a, 9);
+    if (ax.Length() < 1e-12 || bx.Length() < 1e-12) throw dslvm::Error(std::string(who) + ": axes must not be zero");
+    ax.Normalize(); bx.Normalize();
+    if (std::abs(ax.Dot(bx)) > 1e-6) throw dslvm::Error(std::string(who) + ": the two axes must be perpendicular");
+    ch::ChMatrix33<> R;
+    R.SetFromDirectionAxes(ax, bx, ax.Cross(bx));
+    auto link = chrono_types::make_shared<ch::ChLinkUniversal>();
+    link->Initialize(x->b, y->b, ch::ChFrame<>(vec(a, 3), R));
+    return joint_value(new_joint(s, a[0].s, JKind::Universal, link, who));
+  });
+  // Gear pair: A and B turn about parallel (or crossed) shafts through their centres along the given world axis;
+  // B turns -ratio times as fast as A (external spur gears, ratio = radius A / radius B). Each body still needs its
+  // own revolute joint to hold its shaft.
+  method(r, "System", "gear", {"string", "Body", "Body", "float", "float", "float", "float"}, "Joint", [joint_common](void *p, Args &a) {
+    auto &s = S(p);
+    const char *who = "System.gear";
+    auto [x, y] = joint_common(s, a, who);
+    for (int i = 3; i < 7; i++) finite(who, a[i].f);
+    positive(who, "ratio", a[3].f);
+    ch::ChVector3d axis = vec(a, 4);
+    if (axis.Length() < 1e-12) throw dslvm::Error(std::string(who) + ": axis must not be zero");
+    if ((x->b->GetPos() - y->b->GetPos()).Cross(axis.GetNormalized()).Length() < 1e-9)
+      throw dslvm::Error(std::string(who) + ": the two shafts coincide (place the gear centres apart, across the axis)");
+    ch::ChMatrix33<> R;
+    R.SetFromAxisZ(axis.GetNormalized());
+    auto link = chrono_types::make_shared<ch::ChLinkLockGear>();
+    link->Initialize(x->b, y->b, ch::ChFrame<>());
+    link->SetFrameShaft1(ch::ChFrame<>(ch::VNULL, x->b->GetRotMat().transpose() * R));
+    link->SetFrameShaft2(ch::ChFrame<>(ch::VNULL, y->b->GetRotMat().transpose() * R));
+    link->SetTransmissionRatio(a[3].f);
+    link->SetEnforcePhase(true);
+    return joint_value(new_joint(s, a[0].s, JKind::Gear, link, who));
+  });
   method(r, "System", "lock", {"string", "Body", "Body", "float", "float", "float"}, "Joint", [joint_common](void *p, Args &a) {
     auto &s = S(p);
     auto [x, y] = joint_common(s, a, "System.lock");
@@ -630,6 +716,24 @@ void register_host(dslvm::Registry &r, Host &h) {
     j->tsda = link; j->k = a[3].f; j->rest = a[5].f;
     return joint_value(j);
   });
+  // Spring-damper between two points fixed on the bodies, given in world coordinates at creation.
+  method(r, "System", "spring_at", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float", "float", "float", "float"},
+         "Joint", [joint_common](void *p, Args &a) {
+    auto &s = S(p);
+    const char *who = "System.spring_at";
+    auto [x, y] = joint_common(s, a, who);
+    for (int i = 3; i < 12; i++) finite(who, a[i].f);
+    if (a[9].f < 0 || a[10].f < 0 || a[11].f < 0) throw dslvm::Error(std::string(who) + ": stiffness, damping and rest length must be >= 0");
+    if ((vec(a, 3) - vec(a, 6)).Length() < 1e-9) throw dslvm::Error(std::string(who) + ": the two anchor points coincide");
+    auto link = chrono_types::make_shared<ch::ChLinkTSDA>();
+    link->Initialize(x->b, y->b, false, vec(a, 3), vec(a, 6));
+    link->SetSpringCoefficient(a[9].f);
+    link->SetDampingCoefficient(a[10].f);
+    link->SetRestLength(a[11].f);
+    JointObj *j = new_joint(s, a[0].s, JKind::Spring, link, who);
+    j->tsda = link; j->k = a[9].f; j->rest = a[11].f;
+    return joint_value(j);
+  });
   auto motor = [joint_common](const char *who, bool speed) {
     return [=](void *p, Args &a) {
       auto &s = S(p);
@@ -649,6 +753,43 @@ void register_host(dslvm::Registry &r, Host &h) {
          motor("System.motor_speed", true));
   method(r, "System", "motor_angle", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float", "string"}, "Joint",
          motor("System.motor_angle", false));
+
+  method(r, "System", "motor_torque", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float", "string"}, "Joint",
+         [joint_common](void *p, Args &a) {
+    auto &s = S(p);
+    const char *who = "System.motor_torque";
+    auto [x, y] = joint_common(s, a, who);
+    for (int i = 3; i < 9; i++) finite(who, a[i].f);
+    auto m = chrono_types::make_shared<ch::ChLinkMotorRotationTorque>();
+    m->Initialize(y->b, x->b, axis_frame(vec(a, 3), vec(a, 6), who));
+    m->SetTorqueFunction(chrono_types::make_shared<ExprFunction>(a[9].s));
+    JointObj *j = new_joint(s, a[0].s, JKind::Motor, m, who);
+    j->motor = m;
+    return joint_value(j);
+  });
+  // Linear motors: B slides along the axis relative to A (prismatic guide); position, speed or force as an expression in t.
+  auto linear_motor = [joint_common](const char *who, int mode) {
+    return [=](void *p, Args &a) {
+      auto &s = S(p);
+      auto [x, y] = joint_common(s, a, who);
+      for (int i = 3; i < 9; i++) finite(who, a[i].f);
+      auto fn = chrono_types::make_shared<ExprFunction>(a[9].s);
+      ch::ChFrame<> f = axis_frame(vec(a, 3), vec(a, 6), who);
+      std::shared_ptr<ch::ChLinkMotorLinear> mot;
+      if (mode == 0) { auto m = chrono_types::make_shared<ch::ChLinkMotorLinearPosition>(); m->Initialize(y->b, x->b, f); m->SetMotionFunction(fn); mot = m; }
+      else if (mode == 1) { auto m = chrono_types::make_shared<ch::ChLinkMotorLinearSpeed>(); m->Initialize(y->b, x->b, f); m->SetSpeedFunction(fn); mot = m; }
+      else { auto m = chrono_types::make_shared<ch::ChLinkMotorLinearForce>(); m->Initialize(y->b, x->b, f); m->SetForceFunction(fn); mot = m; }
+      JointObj *j = new_joint(s, a[0].s, JKind::LinearMotor, mot, who);
+      j->lmotor = mot;
+      return joint_value(j);
+    };
+  };
+  method(r, "System", "motor_position", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float", "string"}, "Joint",
+         linear_motor("System.motor_position", 0));
+  method(r, "System", "motor_linear_speed", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float", "string"}, "Joint",
+         linear_motor("System.motor_linear_speed", 1));
+  method(r, "System", "motor_force", {"string", "Body", "Body", "float", "float", "float", "float", "float", "float", "string"}, "Joint",
+         linear_motor("System.motor_force", 2));
 
   method(r, "System", "record", {"string", "string"}, "System", [](void *p, Args &a) {
     auto &s = S(p);
@@ -738,6 +879,15 @@ void register_host(dslvm::Registry &r, Host &h) {
   };
   method(r, "Body", "force", {"string", "string", "string"}, "Body", load(ch::ChForce::FORCE, "Body.force"));
   method(r, "Body", "torque", {"string", "string", "string"}, "Body", load(ch::ChForce::TORQUE, "Body.torque"));
+  method(r, "Body", "drag", {"float", "float"}, "Body", [](void *p, Args &a) {
+    auto &bo = B(p);
+    finite("Body.drag", a[0].f); finite("Body.drag", a[1].f);
+    if (a[0].f < 0 || a[1].f < 0) throw dslvm::Error("Body.drag: coefficients must be >= 0");
+    need_not_started(*bo.sys, "Body.drag");
+    if (bo.b->IsFixed()) throw dslvm::Error("Body.drag: body '" + bo.name + "' is fixed");
+    bo.drag_lin = a[0].f; bo.drag_quad = a[1].f;
+    return Value::object("Body", p);
+  });
   method(r, "Body", "omega", {"float", "float", "float"}, "Body", [self](void *p, Args &a) {
     for (int i = 0; i < 3; i++) finite("Body.omega", a[i].f);
     self(p).SetAngVelParent(vec(a, 0)); return Value::object("Body", p);
@@ -772,7 +922,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   getter(r, "Body", "speed"); getter(r, "Body", "ke");
 
   // ---------------------------------------------------------------- Joint
-  getter(r, "Joint", "angle"); getter(r, "Joint", "length"); getter(r, "Joint", "force"); getter(r, "Joint", "torque");
+  getter(r, "Joint", "angle"); getter(r, "Joint", "travel"); getter(r, "Joint", "effort"); getter(r, "Joint", "length"); getter(r, "Joint", "force"); getter(r, "Joint", "torque");
   method(r, "Joint", "reaction_x", {}, "float", [](void *p, Args &) { return Value::real(joint_value_of(J(p), "fx")); });
   method(r, "Joint", "reaction_y", {}, "float", [](void *p, Args &) { return Value::real(joint_value_of(J(p), "fy")); });
   method(r, "Joint", "reaction_z", {}, "float", [](void *p, Args &) { return Value::real(joint_value_of(J(p), "fz")); });
