@@ -47,3 +47,6 @@ target_link_libraries(lmphysics_chrono INTERFACE ChronoEngine)
 target_include_directories(lmphysics_chrono SYSTEM INTERFACE "${CHRONO_SRC}/src" "${CHRONO_GEN}" ${CH_INCLUDES}
                            "${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen")
 target_compile_definitions(lmphysics_chrono INTERFACE CH_STATIC EIGEN_MPL2_ONLY EIGEN_DONT_PARALLELIZE)
+if(WIN32)
+  target_link_libraries(lmphysics_chrono INTERFACE winmm)  # timeGetTime in HACD's micro allocator
+endif()
