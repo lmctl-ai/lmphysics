@@ -34,7 +34,7 @@ ok "build"
 want_version="lmphysics $(sed -n 's/^project(lmphysics VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
 [ "$("$HOST" --version)" = "$want_version" ] || fail "--version is not exactly '$want_version'"
 ok "--version prints exactly '$want_version'"
-python3 scripts/gen-schema.py >/dev/null && git diff --quiet -- schema/lmphysics.dsl.json 2>/dev/null || [ ! -d .git ] || fail "schema/lmphysics.dsl.json is stale: run scripts/gen-schema.py"
+python3 scripts/gen-schema.py >/dev/null && git diff --quiet -- schema/lmphysics.dsl.json 2>/dev/null || [ ! -e .git ] || fail "schema/lmphysics.dsl.json is stale: run scripts/gen-schema.py"
 ok "schema matches the registrations in cpp/main.cpp"
 "$HOST" --dsl-schema --json >"$WORK/schema.json" || fail "embedded schema print"
 cmp -s "$WORK/schema.json" schema/lmphysics.dsl.json || fail "embedded schema differs from schema/lmphysics.dsl.json"
@@ -42,6 +42,7 @@ ok "--dsl-schema --json prints byte-identical embedded schema bytes"
 diff -u <("$LMSCRIPT" --dsl-signatures schema/lmphysics.dsl.json) <("$HOST" --dsl-signatures) || fail "host/compiler signatures differ"
 ok "host registry matches compiler signatures"
 "$HOST" --notices | grep -q "Project Chrono" || fail "--notices missing third-party text"
+cmp -s <("$HOST" --notices) THIRD_PARTY_NOTICES || fail "--notices differs from THIRD_PARTY_NOTICES"
 ok "--notices prints the third-party license texts"
 
 case "$UNAME_S" in
@@ -150,6 +151,29 @@ expect_error diverged 'let s = phys.system("nsc"); s.gravity(0.0, 0.0, 0.0); let
 expect_error singular 'let s = phys.system("nsc"); s.integrator("hht"); let g = s.ground("g"); let a = s.box("a", 1.0, 0.1, 0.1, 100.0).pos(0.5, 0.0, 0.0); let r1 = s.revolute("r1", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); let r2 = s.revolute("r2", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); s.step();' "factorization failed"
 expect_error nsc_direct 'let s = phys.system("nsc"); s.integrator("hht"); s.floor("f", "default"); let b = s.sphere("b", 0.1, 500.0).pos(0.0, 0.0, 0.3).collide("default"); s.run(1.0);' "nsc contact needs a complementarity solver"
 ok "errors stop the program with exit 3 and a clear message (24 cases)"
+
+# Determinism without lmplot: a contact run that records every step gives byte-identical CSV twice.
+cat >"$WORK/det.lms" <<LMS
+p = _dsl_ cli="lmphysics";
+let s = phys.system("nsc");
+s.material("r", 0.3, 0.8).timestep(0.001);
+s.floor("floor", "r");
+let b = s.sphere("b", 0.1, 500.0).pos(0.0, 0.0, 1.0).vel(0.5, 0.2, 0.0).omega(1.0, 0.0, 3.0).collide("r");
+let c = s.box("c", 0.2, 0.3, 0.1, 300.0).pos(0.3, 0.0, 0.5).rot_axis(1.0, 1.0, 0.0, 0.4).collide("r");
+s.record("b", "x,y,z,vx,vy,vz,wx,wy,wz").record("c", "x,y,z,qw,qx,qy,qz");
+s.run(2.0);
+s.save_csv("$WORK/det.csv");
+end _dsl_
+savedsl(p, "$WORK/det.dslb");
+LMS
+"$LMSCRIPT" "$WORK/det.lms" >/dev/null || fail "determinism program compile"
+"$HOST" --dsl "$WORK/det.dslb" >/dev/null 2>&1 || fail "determinism run 1"
+mv "$WORK/det.csv" "$WORK/det1.csv"
+"$HOST" --dsl "$WORK/det.dslb" >/dev/null 2>&1 || fail "determinism run 2"
+mv "$WORK/det.csv" "$WORK/det2.csv"
+[ "$(wc -l <"$WORK/det1.csv" | tr -d ' ')" = 2002 ] || fail "determinism CSV has $(wc -l <"$WORK/det1.csv") lines, expected 2002"
+cmp -s "$WORK/det1.csv" "$WORK/det2.csv" || fail "contact CSV differs between two identical runs"
+ok "a recorded contact run is byte-identical on rerun"
 
 set +e; "$HOST" --dsl "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"
