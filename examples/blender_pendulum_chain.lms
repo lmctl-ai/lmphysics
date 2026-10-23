@@ -1,6 +1,7 @@
 # Three rigid links on revolute joints, released from 40 degrees; pose at 0.55 s.
 # Full recorded quaternions orient the links; the OBJ bridge preserves Chrono's Z-up frame.
-import "./bridge/pose_obj.lms";
+# Pin the shared module so raw-URL autorun works from an empty directory.
+import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/379bdafd4ba99c4af432fbbc334b5306e5de9a39/examples/bridge/pose_obj.lms";
 mkdir("build/examples"); mkdir("images");
 sim=_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s=phys.system("nsc"); s.integrator("hht").timestep(0.001).record_every(50);

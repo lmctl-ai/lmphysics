@@ -1,6 +1,7 @@
 # Six falling bricks: initial pose, impact at 0.4 s, and settled at 1.6 s.
 # lmphysics CSV -> quaternion-baked OBJ -> lmblender Cycles; no native bridge release needed.
-import "./bridge/pose_obj.lms";
+# Pin the shared module so raw-URL autorun works from an empty directory.
+import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/379bdafd4ba99c4af432fbbc334b5306e5de9a39/examples/bridge/pose_obj.lms";
 mkdir("build/examples"); mkdir("images");
 sim=_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s=phys.system("nsc");
