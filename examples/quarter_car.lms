@@ -1,0 +1,143 @@
+# Quarter-car suspension over a speed bump: the textbook model of ride comfort against road holding. A 300 kg
+# quarter body rides on a 20 kN/m spring and a damper c over a 40 kg wheel, whose tyre is a 200 kN/m spring on the
+# road. The car crosses an 8 cm, 1 m long bump at 5 m/s. Soft damping isolates the bump (low acceleration, small
+# tyre-load swings) but lets the body float and bounce for seconds; hard damping settles at once but passes the bump
+# straight into the body -- six times the acceleration -- and makes the tyre load jump. lmphysics drives the road with a linear
+# position motor and hangs the springs with spring_at (both need lmphysics v0.1.2), sweeps c from 300 to
+# 8000 N s/m, and lmplot draws the motion and the trade-off; lmdraw draws the model.
+# Output: images/quarter_car.png, images/quarter_car_model.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("build/rendered");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let ms = 300.0;
+let mu = 40.0;
+let ks = 20000.0;
+let kt = 200000.0;
+for (k in range(0, 9)) {
+  let c = 300.0 * pow(8000.0 / 300.0, float(k) / 8.0);
+  let s = phys.system("nsc");
+  s.integrator("trapezoidal").timestep(0.0005).record_every(4);
+  let ground = s.ground("ground");
+  let road = s.box("road", 0.4, 0.4, 0.05, 1000.0).pos(0.0, 0.0, -0.025);
+  let wheel = s.box("wheel", 0.3, 0.3, 0.3, mu / 0.027).pos(0.0, 0.0, 0.3);
+  let body = s.box("body", 0.6, 0.6, 0.2, ms / 0.072).pos(0.0, 0.0, 0.8);
+  # Road surface height under the tyre: a 1 m half-cosine bump crossed at 5 m/s from t = 0.5 s.
+  s.motor_position("profile", ground, road, 0.0, 0.0, -0.025, 0.0, 0.0, 1.0, "0.04 * (1 - cos(2 * pi * min(max((t - 0.5) * 5.0 / 1.0, 0), 1)))");
+  s.prismatic("wheel_guide", ground, wheel, 0.0, 0.0, 0.3, 0.0, 0.0, 1.0);
+  s.prismatic("body_guide", ground, body, 0.0, 0.0, 0.8, 0.0, 0.0, 1.0);
+  # Rest lengths include the static sag, so the car starts in equilibrium.
+  s.spring_at("tyre", road, wheel, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, kt, 50.0, 0.3 + (ms + mu) * 9.81 / kt);
+  s.spring_at("suspension", wheel, body, 0.0, 0.0, 0.3, 0.0, 0.0, 0.8, ks, c, 0.5 + ms * 9.81 / ks);
+  s.record("road", "z").record("wheel", "z").record("body", "z,vz").record("tyre", "force");
+  s.run(8.0);
+  phys.assert_close(body.z(), 0.8, 0.005);
+  s.save_csv("build/examples/quarter_car_" + str(k) + ".csv");
+}
+end _dsl_
+savedsl(sim, "build/quarter_car-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/quarter_car-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# Comfort: peak body acceleration (from the recorded velocity). Road holding: peak change of the tyre load
+# from its static value (m_s + m_u) g = 3335 N; a change near -3335 N means the wheel almost leaves the road.
+out = "c,acc_peak,tyre_peak,body_peak,settle\n";
+static = 340.0 * 9.81;
+for (k in range(0, 9)) {
+  let rows = csv_parse(read_file("build/examples/quarter_car_" + str(k) + ".csv"));
+  let amax = 0.0; let fmax = 0.0; let zmax = 0.0; let settle = 0.0;
+  for (j in range(1, rows.len())) {
+    let a = (num(rows[j]["body.vz"]) - num(rows[j - 1]["body.vz"])) / (num(rows[j]["t"]) - num(rows[j - 1]["t"]));
+    amax = max(amax, abs(a));
+    fmax = max(fmax, abs(abs(num(rows[j]["tyre.force"])) - static));
+    zmax = max(zmax, abs(num(rows[j]["body.z"]) - 0.8));
+    # Settling: the last moment the body is more than 5 mm away from its ride height, counted from the bump.
+    if (abs(num(rows[j]["body.z"]) - 0.8) > 0.005) { settle = num(rows[j]["t"]) - 0.5; }
+  }
+  let c = 300.0 * pow(8000.0 / 300.0, k / 8.0);
+  out = out + sprintf("%.1f,%.4f,%.2f,%.5f,%.3f\n", c, amax, fmax, zmax, settle);
+  println(sprintf("c = %6.0f N s/m: peak body acceleration %5.2f m/s2, tyre load change %4.0f N, body travel %.1f mm, settles in %.2f s", c, amax, fmax, 1000.0 * zmax, settle));
+}
+write_file("build/examples/quarter_car_sweep.csv", out);
+sw = csv_parse(out);
+# Trade-off: the softest setting is the gentlest but takes longest to settle; the hardest is the harshest.
+assert(num(sw[0]["acc_peak"]) * 4.0 < num(sw[8]["acc_peak"]));
+assert(num(sw[0]["tyre_peak"]) < num(sw[8]["tyre_peak"]));
+assert(num(sw[0]["settle"]) > 3.0 * num(sw[8]["settle"]));
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/quarter_car.png", 1100, 500);
+plot.cmd("set datafile separator ','");
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set title 'Over an 8 cm bump at 5 m/s'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'height change [mm]'");
+plot.cmd("set grid");
+plot.cmd("set xrange [0.3:3]");
+plot.cmd("set key top right box opaque");
+plot.cmd("plot 'build/examples/quarter_car_0.csv' skip 1 using 1:(1000*($2+0.025)) with filledcurves y1=0 lc rgb '#dddddd' title 'road', 'build/examples/quarter_car_0.csv' skip 1 using 1:(1000*($4-0.8)) with lines lw 2.5 lc rgb '#1f77b4' title 'body, c = 300 (soft)', 'build/examples/quarter_car_4.csv' skip 1 using 1:(1000*($4-0.8)) with lines lw 2.5 lc rgb '#2ca02c' title 'body, c = 1550', 'build/examples/quarter_car_8.csv' skip 1 using 1:(1000*($4-0.8)) with lines lw 2.5 lc rgb '#d62728' title 'body, c = 8000 (hard)'");
+plot.cmd("set title 'Damper choice: harsh against floaty'");
+plot.cmd("set xlabel 'suspension damping c [N s/m]'");
+plot.cmd("set logscale x");
+plot.cmd("set xrange [250:9000]");
+plot.cmd("set xtics (300, 500, 1000, 2000, 4000, 8000)");
+plot.cmd("set ylabel 'peak body acceleration [m/s^2]'");
+plot.cmd("set y2label 'time to settle within 5 mm [s]'");
+plot.cmd("set ytics nomirror");
+plot.cmd("set y2tics");
+plot.cmd("set yrange [0:42]");
+plot.cmd("set y2range [0:7.2]");
+plot.cmd("set key top center box opaque");
+plot.cmd("plot 'build/examples/quarter_car_sweep.csv' skip 1 using 1:2 with linespoints lw 3 pt 7 lc rgb '#9467bd' title 'body acceleration (comfort)', '' skip 1 using 1:5 axes x1y2 with linespoints lw 3 pt 5 lc rgb '#ff7f0e' title 'settling time (body control)'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/quarter_car-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/quarter_car-draw.dslb;
+assert(r.code == 0);
+println("wrote images/quarter_car.png");
+
+# The model, drawn: road, tyre spring, wheel mass, suspension spring and damper, body mass.
+fn zigzag(x, y0, y1, n) {
+  let s = sprintf("M %.1f,%.1f L %.1f,%.1f", x, y0, x, y0 - 12.0);
+  let h = (y0 - y1 - 24.0) / n;
+  for (i in range(0, n)) {
+    let dx = 14.0; if (i % 2 == 1) { dx = -14.0; }
+    s = s + sprintf(" L %.1f,%.1f", x + dx, y0 - 12.0 - h * (i + 0.5));
+  }
+  return s + sprintf(" L %.1f,%.1f L %.1f,%.1f", x, y1 + 12.0, x, y1);
+}
+tyre = zigzag(250.0, 470.0, 390.0, 6);
+spring = zigzag(210.0, 310.0, 190.0, 8);
+
+d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 560, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "The quarter-car model", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "One corner of a car: two masses, two springs, one damper. lmphysics builds it from boxes, prismatic guides and spring_at.", "#9fb3c8");
+scene.path("M 60,500 L 160,500 C 220,500 230,470 250,470 C 270,470 280,500 340,500 L 440,500", "none", "#9fb3c8", 3.0);
+scene.text(300.0, 530.0, 14.0, "road: 8 cm bump, moved by a linear position motor", "#9fb3c8");
+scene.path(${tyre}, "none", "#ffd166", 3.0);
+scene.text(275.0, 440.0, 14.0, "tyre  k_t = 200 kN/m", "#ffd166");
+scene.rect(170.0, 310.0, 160.0, 80.0, "#2b4a6b").set_attr("stroke", "#9fc6ff").set_attr("stroke-width", "2");
+scene.text(250.0, 356.0, 16.0, "wheel  m_u = 40 kg", "#e6edf3").set_attr("text-anchor", "middle");
+scene.path(${spring}, "none", "#7bd88f", 3.0);
+scene.text(186.0, 255.0, 14.0, "spring k_s = 20 kN/m", "#7bd88f").set_attr("text-anchor", "end");
+scene.path("M 290,310 L 290,270 M 274,270 L 306,270 L 306,230 M 274,270 L 274,230 M 290,250 L 290,190 M 280,250 L 300,250", "none", "#ff6b6b", 3.0);
+scene.text(320.0, 255.0, 14.0, "damper c = 300 ... 8000 N s/m", "#ff6b6b");
+scene.rect(140.0, 110.0, 220.0, 80.0, "#2b4a6b").set_attr("stroke", "#9fc6ff").set_attr("stroke-width", "2");
+scene.text(250.0, 156.0, 16.0, "body  m_s = 300 kg", "#e6edf3").set_attr("text-anchor", "middle");
+scene.text(545.0, 140.0, 14.0, "Body bounce: sqrt(k_s / m_s) / 2 pi = 1.3 Hz", "#e6edf3");
+scene.text(545.0, 166.0, 14.0, "Wheel hop: sqrt((k_s + k_t) / m_u) / 2 pi = 11.8 Hz", "#e6edf3");
+scene.text(545.0, 212.0, 14.0, "Soft damping: gentle, but the body floats on.", "#9fb3c8");
+scene.text(545.0, 234.0, 14.0, "Hard damping: the bump goes straight through,", "#9fb3c8");
+scene.text(545.0, 256.0, 14.0, "the body jolts and the tyre load jumps.", "#9fb3c8");
+scene.text(545.0, 278.0, 14.0, "Cars pick c near 0.3 of critical: about 1500 N s/m.", "#9fb3c8");
+scene.render_png("build/rendered/quarter_car_model.png", 900, 560, 1);
+end _dsl_
+savedsl(d, "build/quarter_car-model.dslb");
+r = system ${dsl_cli(d)} --dsl build/quarter_car-model.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/quarter_car_model.png", "images/quarter_car_model.png");
+println("wrote images/quarter_car_model.png");

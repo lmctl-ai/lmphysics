@@ -118,8 +118,10 @@ if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; t
   for f in "$EXDIR"/images/*.png; do [ -s "$f" ] && img_ok "$f" || fail "example image $f missing or not a PNG"; imgs=$((imgs+1)); done
   ok "$n examples ran by themselves (simulate, draw) and wrote $imgs valid PNGs"
   for f in "$EXDIR"/build/examples/*.csv; do echo "$(sha "$f") $(basename "$f")"; done >"$WORK/before.txt"
+  # The rerun skips the animations and the Cycles renders (slow; their simulations are the same kind as the rest).
   for src in examples/*.lms examples/combo/*.lms; do
-    case "$(basename "$src" .lms)" in anim_*) command -v ffmpeg >/dev/null 2>&1 || continue;; esac
+    case "$(basename "$src" .lms)" in anim_*) continue;; esac
+    grep -q 'cli="lmblender"' "$src" && continue
     (cd "$EXDIR" && timeout 400 "$LMSCRIPT" "$ROOT/$src") >/dev/null 2>&1 || fail "$src rerun"
   done
   for f in "$EXDIR"/build/examples/*.csv; do echo "$(sha "$f") $(basename "$f")"; done >"$WORK/after.txt"

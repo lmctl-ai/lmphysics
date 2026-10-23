@@ -66,3 +66,11 @@ oscillator reaches the analytic steady-state amplitude F0 / sqrt((k - m w^2)^2 +
 
 The double pendulum (two revolute joints) is chaotic: with `hht_alpha(0)` (no numerical damping) HHT diverged at 6.9 s;
 the default alpha keeps the energy to 2e-5 over 12 s. Two runs a micro-radian apart separate by one e-fold per ~0.8 s.
+
+## Contact geometry accuracy (measured 2026-10-23)
+
+- Tipping over an edge: with the default NSC envelope/margin (3 cm / 1 cm) a 40 cm block with its centre of mass
+  1 or 2 cm past a table edge rests indefinitely; with collision_margins(0.002, 0.001) it tips at 1 cm and rests at 0.
+- Rolling cylinder (r 10 cm, 15 deg ramp, mu 0.6) after 4 s: 1.02 (margins 0), 1.03 (dt 1e-4), 0.73 (APGD 150),
+  0.95 (PSOR 1000) of the closed-form distance; a sphere is exact to 1e-3.
+- Body.drag: explicit per step through the force accumulator; terminal speed exact, exponential approach to 0.1% at dt 5e-4.

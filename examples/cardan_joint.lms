@@ -1,0 +1,71 @@
+# Why drive shafts have two universal joints: one Cardan joint bent by an angle b makes the output shaft speed
+# swing twice per turn between w cos(b) and w / cos(b), even when the input turns steadily. lmphysics drives an
+# input shaft at 2 rad/s through a universal joint into an output shaft on its own bearing, at 15, 30 and 45
+# degrees (universal joint: needs lmphysics v0.1.2), and compares the output speed with the closed form
+# w cos(b) / (1 - sin^2(b) sin^2(theta)), theta measured from the input yoke's cross arm. lmplot draws one turn.
+# Output: images/cardan_joint.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+for (k in range(0, 3)) {
+  let b = 0.2617993877991494 * float(k + 1);
+  let cb = cos(b);
+  let sb = sin(b);
+  let s = phys.system("nsc");
+  s.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").solver("psor", 200).timestep(0.0005).record_every(10);
+  let mount = s.ground("mount");
+  let s1 = s.box("in", 0.4, 0.05, 0.05, 1000.0).pos(-0.2, 0.0, 0.0);
+  let s2 = s.box("out", 0.4, 0.05, 0.05, 1000.0).pos(0.2 * cb, 0.2 * sb, 0.0).rot_axis(0.0, 0.0, 1.0, b);
+  # The input turns at 2 rad/s from the start (no spin-up transient).
+  s1.omega(2.0, 0.0, 0.0);
+  s2.omega(2.0 * cb, 2.0 * sb, 0.0);
+  s.motor_speed("drive", mount, s1, -0.2, 0.0, 0.0, 1.0, 0.0, 0.0, "2.0");
+  s.revolute("bearing", mount, s2, 0.2 * cb, 0.2 * sb, 0.0, cb, sb, 0.0);
+  # Cross axes: z fixed in the input yoke, perpendicular to both shafts in the output yoke.
+  s.universal("cardan", s1, s2, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, -sb, cb, 0.0);
+  s.record("in", "wx").record("out", "wx,wy");
+  s.run(3.5);
+  s.save_csv("build/examples/cardan_" + str(k) + ".csv");
+}
+end _dsl_
+savedsl(sim, "build/cardan_joint-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/cardan_joint-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# Output speed along its own axis; the swing should match w / cos(b) and w cos(b).
+cbs = [0.9659258262890683, 0.8660254037844387, 0.7071067811865476];
+sbs = [0.25881904510252074, 0.5, 0.7071067811865476];
+for (k in range(0, 3)) {
+  let rows = csv_parse(read_file("build/examples/cardan_" + str(k) + ".csv"));
+  let out = "t,w_out\n";
+  let hi = 0.0; let lo = 100.0;
+  for (row in rows) {
+    let w = num(row["out.wx"]) * cbs[k] + num(row["out.wy"]) * sbs[k];
+    if (num(row["t"]) > 0.2) { hi = max(hi, w); lo = min(lo, w); }
+    out = out + sprintf("%s,%.5f\n", row["t"], w);
+  }
+  write_file("build/examples/cardan_w" + str(k) + ".csv", out);
+  println(sprintf("bend %2d deg: output %.3f .. %.3f rad/s (closed form %.3f .. %.3f)", 15 * (k + 1), lo, hi, 2.0 * cbs[k], 2.0 / cbs[k]));
+  assert(abs(hi - 2.0 / cbs[k]) < 0.02 && abs(lo - 2.0 * cbs[k]) < 0.02);
+}
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/cardan_joint.png", 900, 520);
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'One universal joint: output speed for a steady 2 rad/s input (lines lmphysics, dots closed form)'");
+plot.cmd("set xlabel 'input shaft angle [turns]'");
+plot.cmd("set ylabel 'output shaft speed [rad/s]'");
+plot.cmd("set grid");
+plot.cmd("set xrange [0:1]");
+plot.cmd("set yrange [1.2:3.2]");
+plot.cmd("set key top center horizontal box opaque");
+plot.cmd("f(th, b) = 2*cos(b) / (1 - sin(b)**2 * sin(th)**2)");
+plot.cmd("set samples 41");
+plot.cmd("plot 'build/examples/cardan_w0.csv' skip 2 using ($1*2/(2*pi)):2 with lines lw 3 lc rgb '#1f77b4' title '15 deg', 'build/examples/cardan_w1.csv' skip 2 using ($1*2/(2*pi)):2 with lines lw 3 lc rgb '#2ca02c' title '30 deg', 'build/examples/cardan_w2.csv' skip 2 using ($1*2/(2*pi)):2 with lines lw 3 lc rgb '#d62728' title '45 deg', f(2*pi*x, pi/12) with points pt 7 ps 0.7 lc rgb '#000000' notitle, f(2*pi*x, pi/6) with points pt 7 ps 0.7 lc rgb '#000000' notitle, f(2*pi*x, pi/4) with points pt 7 ps 0.7 lc rgb '#000000' notitle");
+plot.close();
+end _dsl_
+savedsl(draw, "build/cardan_joint-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/cardan_joint-draw.dslb;
+assert(r.code == 0);
+println("wrote images/cardan_joint.png");

@@ -1,0 +1,85 @@
+# How far does a baseball really fly? A 145 g, 7.4 cm ball hit at 45 m/s (100 mph) would carry 206 m in vacuum at
+# 45 degrees. Air drag F = -1/2 rho Cd A |v| v (Cd = 0.35, rho = 1.2 kg/m^3: c2 = 0.0009 kg/m) cuts that to about
+# 110 m and moves the best angle down to about 40 degrees; the descending branch is steeper than the climb. lmphysics
+# applies the drag with Body.drag (needs lmphysics v0.1.2), checks the terminal speed of a dropped ball against
+# sqrt(m g / c2) = 39.7 m/s, sweeps the launch angle, and lmplot draws the trajectories and range curves.
+# Output: images/projectile_drag.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let m = 0.145;
+let c2 = 0.5 * 1.2 * 0.35 * 3.141592653589793 * 0.037 * 0.037;
+# Terminal speed of a dropped ball.
+let t = phys.system("nsc");
+t.integrator("trapezoidal").timestep(0.001);
+let drop = t.sphere("drop", 0.037, 1000.0).mass_props(m, 0.00008, 0.00008, 0.00008).drag(0.0, c2);
+t.run(30.0);
+phys.assert_close(-drop.vz(), sqrt(m * 9.81 / c2), 0.01);
+# Angle sweep 10..70 degrees, with and without air.
+for (k in range(0, 13)) {
+  let a = (10.0 + 5.0 * float(k)) * 3.141592653589793 / 180.0;
+  let s = phys.system("nsc");
+  s.integrator("trapezoidal").timestep(0.001).record_every(10);
+  let air = s.sphere("air", 0.037, 1000.0).mass_props(m, 0.00008, 0.00008, 0.00008).vel(45.0 * cos(a), 0.0, 45.0 * sin(a)).drag(0.0, c2);
+  let vac = s.sphere("vac", 0.037, 1000.0).mass_props(m, 0.00008, 0.00008, 0.00008).pos(0.0, 5.0, 0.0).vel(45.0 * cos(a), 0.0, 45.0 * sin(a));
+  s.record("air", "x,z").record("vac", "x,z");
+  s.run(2.0 * 45.0 * sin(a) / 9.81 + 0.05);
+  s.save_csv("build/examples/drag_" + str(k) + ".csv");
+}
+end _dsl_
+savedsl(sim, "build/projectile_drag-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/projectile_drag-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# Range: where z crosses 0 on the way down, by linear interpolation between recorded rows.
+fn landing(rows, name) {
+  for (j in range(1, rows.len())) {
+    let z0 = num(rows[j - 1][name + ".z"]); let z1 = num(rows[j][name + ".z"]);
+    if (j > 2 && z0 > 0.0 && z1 <= 0.0) {
+      let x0 = num(rows[j - 1][name + ".x"]); let x1 = num(rows[j][name + ".x"]);
+      return x0 + (x1 - x0) * z0 / (z0 - z1);
+    }
+  }
+  assert(false, "no landing found for " + name);
+}
+out = "angle,range_air,range_vacuum\n";
+best = 0.0; best_angle = 0.0;
+for (k in range(0, 13)) {
+  let rows = csv_parse(read_file("build/examples/drag_" + str(k) + ".csv"));
+  let ra = landing(rows, "air");
+  let rv = landing(rows, "vac");
+  let ang = 10.0 + 5.0 * k;
+  if (ra > best) { best = ra; best_angle = ang; }
+  out = out + sprintf("%.0f,%.3f,%.3f\n", ang, ra, rv);
+}
+write_file("build/examples/drag_range.csv", out);
+println(sprintf("longest hit with air: %.0f m at %.0f degrees (vacuum: 206 m at 45 degrees)", best, best_angle));
+assert(best_angle < 45.0 && best > 100.0 && best < 150.0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/projectile_drag.png", 1100, 480);
+plot.cmd("set datafile separator ','");
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set title 'Baseball hit at 45 m/s: with air (solid) and in vacuum (dashed)'");
+plot.cmd("set xlabel 'distance [m]'");
+plot.cmd("set ylabel 'height [m]'");
+plot.cmd("set xrange [0:215]");
+plot.cmd("set yrange [0:80]");
+plot.cmd("set grid");
+plot.cmd("set key top right box opaque");
+plot.cmd("plot 'build/examples/drag_2.csv' skip 1 using 2:($3 >= 0 ? $3 : 1/0) with lines lw 3 lc rgb '#1f77b4' title '20 deg', 'build/examples/drag_5.csv' skip 1 using 2:($3 >= 0 ? $3 : 1/0) with lines lw 3 lc rgb '#d62728' title '35 deg', 'build/examples/drag_7.csv' skip 1 using 2:($3 >= 0 ? $3 : 1/0) with lines lw 3 lc rgb '#2ca02c' title '45 deg', 'build/examples/drag_10.csv' skip 1 using 2:($3 >= 0 ? $3 : 1/0) with lines lw 3 lc rgb '#9467bd' title '60 deg', 'build/examples/drag_2.csv' skip 1 using 4:($5 >= 0 ? $5 : 1/0) with lines lw 1.5 dt 2 lc rgb '#1f77b4' notitle, 'build/examples/drag_5.csv' skip 1 using 4:($5 >= 0 ? $5 : 1/0) with lines lw 1.5 dt 2 lc rgb '#d62728' notitle, 'build/examples/drag_7.csv' skip 1 using 4:($5 >= 0 ? $5 : 1/0) with lines lw 1.5 dt 2 lc rgb '#2ca02c' notitle, 'build/examples/drag_10.csv' skip 1 using 4:($5 >= 0 ? $5 : 1/0) with lines lw 1.5 dt 2 lc rgb '#9467bd' notitle");
+plot.cmd("set title 'Range against launch angle'");
+plot.cmd("set xlabel 'launch angle [deg]'");
+plot.cmd("set ylabel 'range [m]'");
+plot.cmd("set xrange [5:75]");
+plot.cmd("set yrange [0:220]");
+plot.cmd("set key bottom center box opaque");
+plot.cmd("plot 45**2*sin(2*x*pi/180)/9.81 with lines lw 2 lc rgb '#bbbbbb' title 'vacuum: v^2 sin(2 theta) / g', 'build/examples/drag_range.csv' skip 1 using 1:3 with points pt 6 ps 1.2 lc rgb '#555555' title 'lmphysics, no drag', 'build/examples/drag_range.csv' skip 1 using 1:2 with linespoints lw 3 pt 7 ps 1.2 lc rgb '#d62728' title 'lmphysics, quadratic drag'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/projectile_drag-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/projectile_drag-draw.dslb;
+assert(r.code == 0);
+println("wrote images/projectile_drag.png");

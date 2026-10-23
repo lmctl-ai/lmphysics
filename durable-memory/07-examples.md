@@ -45,3 +45,23 @@ and its `end _dsl_` line must start at column 1 even inside a loop. lmcad's `rea
 `test.sh` checks the gallery (PNG/GIF magic, <= 3 MB, linked examples exist), runs the examples in a scratch directory
 when lmplot is available (`LMPHYSICS_TEST_NETWORK=1`; the anim example is skipped loudly without ffmpeg) and compares the
 CSVs of a second run byte for byte.
+
+## Worked-problem examples (2026-10-23, Claude QA pass)
+
+Seventeen scripts, each a story with a known answer checked inside the script:
+rolling_race (a = g sin / (1 + I/m r^2), spheres carry cylinder/hoop inertia because Bullet's cylinder contact
+rolls 2-5% off), bowling_skid (skid 2 v0 / 7 mu g, then 5/7 v0; lmdraw FBD + chart), newtons_cradle (lmplot +
+Cycles; 0.5 mm gaps, margins 0), harmonic_overhang (needs collision_margins(0.002, 0.001): with defaults a box 2 cm
+past an edge does not tip), domino_cascade (wave ~ sqrt(g h); tilt-onset criterion 10 deg because close dominoes
+lean and never reach 45), chain_whip + anim_chain_whip (tip 8.5 m/s vs 4.75 free fall), gyroscope (precession
+m g d / I w, nutation 1/w^2), tennis_racket (intermediate-axis flips, filmstrip), coupled_pendulums (beats
+pi/(w2 - w1)), four_bar_linkage (rocker limits by the law of cosines, trapezoidal + PSOR), billiards_90,
+wrecking_ball (pyramid with APGD and default margins), and four that need v0.1.2: projectile_drag (Body.drag),
+quarter_car (motor_position + spring_at), gear_train (gear + effort), cardan_joint (universal).
+
+lmscript pitfalls met while writing them:
+- no sin/cos/atan outside `_dsl_` blocks: the pose bridge carries `pose_sincos`; four_bar_linkage has `atan2s`;
+- `${x}` writes an integral float (0.0) as an int literal, so a float parameter fails to compile; round to whole
+  pixels and use `float(${xi})`, or nudge by 1e-6 (1e-7 has no literal form);
+- CSV values from csv_parse may be strings (exponent form): wrap with `num()`;
+- a variable named `cmd` inside a fn was parsed as a shell command; use another name.
