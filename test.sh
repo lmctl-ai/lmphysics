@@ -70,6 +70,9 @@ for src in tests/*.lms; do
 done
 ok "$n test programs compile as bytecode v5, run and pass their own assertions"
 
+[ "$(wc -l <build/loads_thinned.csv | tr -d ' ')" = 102 ] || fail "record_every(10) over 1000 steps should give header + 101 rows"
+ok "record_every thins the CSV (101 rows) and keeps the final state"
+
 # Gallery: every image the README references exists and is a valid PNG/GIF; every linked example exists.
 img_ok() { # file
   head -c 8 "$1" | od -An -tx1 | tr -d ' \n' | grep -q '^89504e470d0a1a0a' && return 0
@@ -144,13 +147,21 @@ expect_error badintegrator 'let s = phys.system("nsc"); s.integrator("rk4");' "u
 expect_error newton_na 'let s = phys.system("nsc"); s.integrator("euler_projected").newton(5, 0.001, 0.001); s.hht_alpha(-0.1);' "integrator"
 expect_error badtimestep 'let s = phys.system("nsc"); s.timestep(0.0);' "must be positive"
 expect_error badcsv 'let s = phys.system("nsc"); s.save_csv("/nonexistent-dir/x.csv");' "cannot write"
+expect_error margins_smc 'let s = phys.system("smc"); s.collision_margins(0.0, 0.0);' "only nsc"
+expect_error margins_late 'let s = phys.system("nsc"); s.material("m", 0.5, 0.0); s.floor("f", "m"); s.collision_margins(0.0, 0.0);' "before any body collides"
+expect_error margins_range 'let s = phys.system("nsc"); s.collision_margins(0.5, 0.0);' "must be in"
+expect_error force_fixed 'let s = phys.system("nsc"); let g = s.ground("g"); g.force("1.0", "0.0", "0.0");' "is fixed"
+expect_error force_expr 'let s = phys.system("nsc"); let a = s.sphere("a", 0.1, 1.0); a.force("1 +* t", "0.0", "0.0");' "expression"
+expect_error force_late 'let s = phys.system("nsc"); let a = s.sphere("a", 0.1, 1.0); s.step(); a.force("1.0", "0.0", "0.0");' "after the simulation has started"
+expect_error every_bad 'let s = phys.system("nsc"); s.record_every(0);' "must be in"
+expect_error every_late 'let s = phys.system("nsc"); s.step(); s.record_every(5);' "after the simulation has started"
 expect_error assertfail 'phys.assert_close(1.0, 2.0, 0.1);' "assert_close failed"
 expect_error nanfriction 'let s = phys.system("nsc"); s.material("m", sqrt(-1.0), 0.5);' "friction >= 0"
 expect_error matredefine 'let s = phys.system("nsc"); s.material("m", 0.5, 0.0); s.floor("f", "m"); s.material("m", 0.9, 0.0);' "already attached"
 expect_error diverged 'let s = phys.system("nsc"); s.gravity(0.0, 0.0, 0.0); let g = s.ground("g"); let a = s.sphere("a", 0.1, 1.0).pos(1.0, 0.0, 0.0); let m = s.motor_speed("m", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, "sqrt(-1)"); s.run(0.1);' "diverged: body 'a'"
 expect_error singular 'let s = phys.system("nsc"); s.integrator("hht"); let g = s.ground("g"); let a = s.box("a", 1.0, 0.1, 0.1, 100.0).pos(0.5, 0.0, 0.0); let r1 = s.revolute("r1", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); let r2 = s.revolute("r2", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); s.step();' "factorization failed"
 expect_error nsc_direct 'let s = phys.system("nsc"); s.integrator("hht"); s.floor("f", "default"); let b = s.sphere("b", 0.1, 500.0).pos(0.0, 0.0, 0.3).collide("default"); s.run(1.0);' "nsc contact needs a complementarity solver"
-ok "errors stop the program with exit 3 and a clear message (24 cases)"
+ok "errors stop the program with exit 3 and a clear message (32 cases)"
 
 # Determinism without lmplot: a contact run that records every step gives byte-identical CSV twice.
 cat >"$WORK/det.lms" <<LMS

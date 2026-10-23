@@ -1,0 +1,48 @@
+# Applied forces and torques (expressions in t) and thinned recording.
+out = ARGV.len() > 0 ? ARGV[0] : "build/loads.dslb";
+p = _dsl_ cli="lmphysics";
+# Constant force F = 3 N on a 2 kg body in zero gravity: x = F t^2 / (2 m), v = F t / m.
+let a = phys.system("nsc");
+a.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let blk = a.box("blk", 1.0, 1.0, 1.0, 2.0).force("3.0", "0.0", "0.0");
+a.run(2.0);
+phys.assert_close(blk.x(), 3.0 / (2.0 * 2.0) * 4.0, 0.0001);
+phys.assert_close(blk.vx(), 3.0, 0.0001);
+# Time-varying force F = 2 t: v = t^2 / m.
+let b = phys.system("nsc");
+b.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let cart = b.box("cart", 1.0, 1.0, 1.0, 2.0).force("0.0", "2.0 * t", "0.0");
+b.run(2.0);
+phys.assert_close(cart.vy(), 4.0 / 2.0, 0.001);
+# Constant torque about z on a free body: w = tau t / Izz (cube side 1 m, mass 6 kg: Izz = m (1 + 1) / 12).
+let c = phys.system("nsc");
+c.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let wheel = c.box("wheel", 1.0, 1.0, 1.0, 6.0).torque("0.0", "0.0", "2.0");
+c.run(1.5);
+phys.assert_close(wheel.wz(), 2.0 * 1.5 / (6.0 * 2.0 / 12.0), 0.001);
+# Driven damped oscillator at resonance: steady amplitude F0 / (c w0) = 10 / (4 * 10) = 0.25 m.
+let d = phys.system("nsc");
+d.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
+let wall = d.ground("wall");
+let car = d.sphere("car", 0.1, 1000.0);
+car.mass_props(1.0, 0.01, 0.01, 0.01);
+car.force("10.0 * sin(10.0 * t)", "0.0", "0.0");
+d.prismatic("rail", wall, car, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0);
+d.spring("k", wall, car, 100.0, 4.0, 0.0);
+d.run(6.0);
+let amp = 0.0;
+for (k in range(0, 400)) {
+  d.step();
+  amp = max(amp, abs(car.x()));
+}
+phys.assert_close(amp, 0.25, 0.005);
+# record_every thins the CSV but keeps the final state.
+let e = phys.system("nsc");
+e.timestep(0.001).record_every(10);
+let ball = e.sphere("ball", 0.1, 500.0).pos(0.0, 0.0, 5.0);
+e.record("ball", "z");
+e.run(1.0);
+phys.assert_close(ball.z(), 5.0 - 9.81 / 2.0, 0.01);
+e.save_csv("build/loads_thinned.csv");
+end _dsl_
+savedsl(p, out);

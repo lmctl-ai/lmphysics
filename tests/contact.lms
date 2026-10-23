@@ -25,6 +25,27 @@ while (bounces < 2 && steps < 20000) {
 phys.assert_close(float(bounces), 2.0, 0.0);
 phys.assert_close(apex1, 0.525, 0.125);
 phys.assert_close(apex2, apex1 * 0.525, apex1 * 0.125 + 0.01);
+# With collision_margins(0, 0) the rebound lands on the contact step and the apex is e^2 h (e = 0.5: 0.25 m, 0.0625 m).
+let x = phys.system("nsc");
+x.collision_margins(0.0, 0.0).material("m", 0.3, 0.5).timestep(0.0005);
+x.floor("floor", "m");
+let xb = x.sphere("ball", 0.05, 800.0).pos(0.0, 0.0, 1.05).collide("m");
+let xp = xb.vz();
+let xn = 0;
+let xs = 0;
+let xa1 = 0.0;
+let xa2 = 0.0;
+while (xn < 2 && xs < 20000) {
+  x.step();
+  xs = xs + 1;
+  if (xp > 0.0 && xb.vz() <= 0.0) {
+    xn = xn + 1;
+    if (xn == 1) { xa1 = xb.z() - 0.05; } else { xa2 = xb.z() - 0.05; }
+  }
+  xp = xb.vz();
+}
+phys.assert_close(xa1, 0.25, 0.01);
+phys.assert_close(xa2, 0.0625, 0.005);
 # A perfectly inelastic ball (e = 0) stops at the floor: it ends at rest with its radius above z = 0.
 let b = phys.system("nsc");
 b.material("clay", 0.5, 0.0).timestep(0.001);

@@ -83,6 +83,15 @@
             "returns": "System"
           }
         ],
+        "collision_margins": [
+          {
+            "params": [
+              "float",
+              "float"
+            ],
+            "returns": "System"
+          }
+        ],
         "newton": [
           {
             "params": [
@@ -301,6 +310,14 @@
             "returns": "System"
           }
         ],
+        "record_every": [
+          {
+            "params": [
+              "int"
+            ],
+            "returns": "System"
+          }
+        ],
         "step": [
           {
             "params": [],
@@ -372,6 +389,26 @@
               "float",
               "float",
               "float"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "force": [
+          {
+            "params": [
+              "string",
+              "string",
+              "string"
+            ],
+            "returns": "Body"
+          }
+        ],
+        "torque": [
+          {
+            "params": [
+              "string",
+              "string",
+              "string"
             ],
             "returns": "Body"
           }

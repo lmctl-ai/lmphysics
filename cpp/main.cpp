@@ -20,6 +20,7 @@
 #include "chrono/collision/ChCollisionShapeSphere.h"
 #include "chrono/functions/ChFunctionBase.h"
 #include "chrono/physics/ChBody.h"
+#include "chrono/physics/ChForce.h"
 #include "chrono/physics/ChContactMaterialNSC.h"
 #include "chrono/physics/ChContactMaterialSMC.h"
 #include "chrono/physics/ChLinkDistance.h"
@@ -98,10 +99,25 @@ struct SysObj {
   std::vector<std::vector<double>> rows;
   std::vector<std::string> header{"t"};
   double dt = 1e-3;
+  int every = 1;           // record every n-th step (System.record_every)
+  long long steps = 0;
+  double envelope = 0.03, margin = 0.01;  // NSC collision envelope and inward margin (see System.collision_margins)
   bool started = false;
   std::string integrator = "euler";
   std::string solver = "psor";
   std::set<std::string> used_mats;  // materials attached to collision shapes: redefining them would not reach the shapes
+};
+
+struct MarginGuard {
+  double old_envelope, old_margin;
+  explicit MarginGuard(const SysObj &s)
+      : old_envelope(ch::ChCollisionModel::GetDefaultSuggestedEnvelope()), old_margin(ch::ChCollisionModel::GetDefaultSuggestedMargin()) {
+    if (!s.smc) { ch::ChCollisionModel::SetDefaultSuggestedEnvelope(s.envelope); ch::ChCollisionModel::SetDefaultSuggestedMargin(s.margin); }
+  }
+  ~MarginGuard() {
+    ch::ChCollisionModel::SetDefaultSuggestedEnvelope(old_envelope);
+    ch::ChCollisionModel::SetDefaultSuggestedMargin(old_margin);
+  }
 };
 
 struct Host { std::vector<std::unique_ptr<SysObj>> systems; };
@@ -178,6 +194,7 @@ BodyObj *new_body(SysObj &s, const std::string &name, const char *who) {
   unique_name(s, name, who);
   auto b = std::make_unique<BodyObj>();
   b->name = name;
+  MarginGuard guard(s);
   b->b = chrono_types::make_shared<ch::ChBody>();
   b->sys = &s;
   s.sys->Add(b->b);
@@ -296,6 +313,7 @@ void do_step(SysObj &s) {
   const double t0 = s.sys->GetChTime();
   auto *flag = dynamic_cast<SolverFailure *>(s.sys->GetSolver().get());
   if (flag) flag->failed = false;
+  MarginGuard guard(s);  // Chrono reads the process-wide default margin when it binds a shape to the collision system
   try { s.sys->DoStepDynamics(s.dt); }
   catch (const std::exception &e) {
     std::string hint = (s.integrator == "hht" || s.integrator == "newmark")
@@ -320,7 +338,7 @@ void do_step(SysObj &s) {
                          "' has a non-finite position or velocity (check motor expressions, stiffness and the timestep)");
   }
   for (auto &j : s.joints) track_angle(*j);
-  capture_row(s);
+  if (++s.steps % s.every == 0) capture_row(s);
 }
 
 // Chrono's solver types, with the direct solvers wrapped so that a failed factorization is reported.
@@ -354,6 +372,11 @@ void getter(dslvm::Registry &r, const char *type, const char *col) {
     return Value::real(body ? body_value_of(B(p), c) : joint_value_of(J(p), c));
   });
 }
+
+// Chrono's default NSC collision envelope (3 cm) and margin (1 cm) make contacts appear early, so the one-step-late
+// rebound of the Newton restitution model lands between e^2 and e (a ball with e = 0.5 gave apex heights of 0.07 m
+// instead of 0.25 m). With both at 0 the apex is e^2 h to 1 %. Chrono keeps these defaults in process-wide statics read
+// when a body's collision model is created, so they are set around every body creation and step of an NSC system.
 
 void register_host(dslvm::Registry &r, Host &h) {
   r.context("phys", "Phys");
@@ -440,6 +463,14 @@ void register_host(dslvm::Registry &r, Host &h) {
     nsc->SetMinBounceSpeed(a[0].f);
     return sys_value(p);
   });
+  method(r, "System", "collision_margins", {"float", "float"}, "System", [](void *p, Args &a) {
+    if (!(a[0].f >= 0 && a[0].f <= 0.1) || !(a[1].f >= 0 && a[1].f <= 0.1))
+      throw dslvm::Error("System.collision_margins: envelope and margin must be in [0, 0.1] m");
+    if (S(p).smc) throw dslvm::Error("System.collision_margins: only nsc systems use them");
+    for (auto &b : S(p).bodies) if (b->collide) throw dslvm::Error("System.collision_margins: call it before any body collides");
+    S(p).envelope = a[0].f; S(p).margin = a[1].f;
+    return sys_value(p);
+  });
   method(r, "System", "newton", {"int", "float", "float"}, "System", [](void *p, Args &a) {
     if (a[0].i < 1 || a[0].i > 10000) throw dslvm::Error("System.newton: iterations must be in 1..10000");
     positive("System.newton", "tolerances", a[1].f); positive("System.newton", "tolerances", a[2].f);
@@ -515,6 +546,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "System", "floor", {"string", "string"}, "Body", [](void *p, Args &a) {
     auto &s = S(p);
     if (!s.mats.count(a[1].s)) throw dslvm::Error("System.floor: unknown material '" + a[1].s + "'");
+    MarginGuard guard(s);
     BodyObj *b = new_body(s, a[0].s, "System.floor");
     b->shape = Shape::Box; b->d[0] = 200; b->d[1] = 200; b->d[2] = 2;
     b->b->SetMass(1.0);
@@ -624,6 +656,12 @@ void register_host(dslvm::Registry &r, Host &h) {
     s.recs.push_back(std::move(rec));
     return sys_value(p);
   });
+  method(r, "System", "record_every", {"int"}, "System", [](void *p, Args &a) {
+    need_not_started(S(p), "System.record_every");
+    if (a[0].i < 1 || a[0].i > 1000000) throw dslvm::Error("System.record_every: n must be in 1..1000000");
+    S(p).every = (int)a[0].i;
+    return sys_value(p);
+  });
   method(r, "System", "step", {}, "System", [](void *p, Args &) { do_step(S(p)); return sys_value(p); });
   method(r, "System", "run", {"float"}, "System", [](void *p, Args &a) {
     auto &s = S(p);
@@ -641,6 +679,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "System", "save_csv", {"string"}, "System", [](void *p, Args &a) {
     auto &s = S(p);
     start(s);
+    if (s.rows.back()[0] != s.sys->GetChTime()) capture_row(s);  // with record_every the final state is always written
     std::ofstream f(a[0].s, std::ios::binary);
     if (!f) throw dslvm::Error("System.save_csv: cannot write '" + a[0].s + "'");
     for (size_t i = 0; i < s.header.size(); i++) f << (i ? "," : "") << s.header[i];
@@ -670,6 +709,24 @@ void register_host(dslvm::Registry &r, Host &h) {
     need_not_started(*B(p).sys, "Body.rot_axis");
     self(p).SetRot(ch::QuatFromAngleAxis(a[3].f, ax.GetNormalized())); return Value::object("Body", p);
   });
+  // Applied loads: world-frame force at the centre of mass, or torque, each component an expression in t.
+  auto load = [](ch::ChForce::ForceType mode, const char *who) {
+    return [mode, who](void *p, Args &a) {
+      auto &bo = B(p);
+      need_not_started(*bo.sys, who);
+      if (bo.b->IsFixed()) throw dslvm::Error(std::string(who) + ": body '" + bo.name + "' is fixed");
+      auto f = chrono_types::make_shared<ch::ChForce>();
+      f->SetMode(mode);
+      f->SetAlign(ch::ChForce::WORLD_DIR);
+      f->SetF_x(chrono_types::make_shared<ExprFunction>(a[0].s));
+      f->SetF_y(chrono_types::make_shared<ExprFunction>(a[1].s));
+      f->SetF_z(chrono_types::make_shared<ExprFunction>(a[2].s));
+      bo.b->AddForce(f);
+      return Value::object("Body", p);
+    };
+  };
+  method(r, "Body", "force", {"string", "string", "string"}, "Body", load(ch::ChForce::FORCE, "Body.force"));
+  method(r, "Body", "torque", {"string", "string", "string"}, "Body", load(ch::ChForce::TORQUE, "Body.torque"));
   method(r, "Body", "omega", {"float", "float", "float"}, "Body", [self](void *p, Args &a) {
     for (int i = 0; i < 3; i++) finite("Body.omega", a[i].f);
     self(p).SetAngVelParent(vec(a, 0)); return Value::object("Body", p);
@@ -681,6 +738,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   });
   method(r, "Body", "collide", {"string"}, "Body", [](void *p, Args &a) {
     auto &bo = B(p);
+    MarginGuard guard(*bo.sys);
     auto it = bo.sys->mats.find(a[0].s);
     if (it == bo.sys->mats.end()) throw dslvm::Error("Body.collide: unknown material '" + a[0].s + "'");
     if (bo.shape == Shape::None) throw dslvm::Error("Body.collide: body '" + bo.name + "' has no shape (ground bodies cannot collide)");
