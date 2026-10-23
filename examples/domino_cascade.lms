@@ -1,0 +1,115 @@
+# A domino cascade settles to a constant speed that depends on the spacing. lmphysics topples five rows of sixteen
+# 20 cm dominoes (3 cm thick, friction 0.4) with spacing d from 0.3 to 0.8 times their height h, and the script
+# times when each domino starts to tip. After a few dominoes the wave runs at a steady speed of the order of
+# sqrt(g h) = 1.4 m/s; close spacing is slow at first but fastest once running, wide spacing loses more energy per hit.
+# lmplot draws the arrival times and the steady speed; lmblender renders one row mid-cascade.
+# Output: images/domino_cascade.png, images/domino_cascade_render.png   (run: lmctl autorun <raw url of this file>)
+import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536a04b8d4448162c4a229d6/examples/bridge/pose_obj.lms";
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let h = 0.2;
+for (k in range(0, 5)) {
+  let d = h * (0.3 + 0.125 * float(k));
+  let s = phys.system("nsc");
+  # Small collision margins: with Chrono's 3 cm default a 3 cm thick domino would touch its neighbours early.
+  s.material("wood", 0.4, 0.1).timestep(0.0005).solver("psor", 150).collision_margins(0.002, 0.001).record_every(10);
+  s.floor("floor", "wood");
+  for (i in range(0, 16)) {
+    let b = s.box("d" + str(i), 0.03, 0.1, h, 700.0).pos(float(i) * d, 0.0, h / 2.0).collide("wood");
+    # The first one is flicked: it turns at 2.5 rad/s about its front bottom edge.
+    if (i == 0) { b.omega(0.0, 2.5, 0.0).vel(0.25, 0.0, 0.0375); }
+    s.record("d" + str(i), "x,y,z,qw,qx,qy,qz");
+  }
+  s.run(3.0);
+  s.save_csv("build/examples/domino_" + str(k) + ".csv");
+}
+end _dsl_
+savedsl(sim, "build/domino_cascade-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/domino_cascade-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# Arrival time of each domino: the first row where it is tilted more than 10 degrees (q_y = sin(5 deg)); with close
+# spacing a domino comes to rest leaning on the next one, so a larger angle is never reached.
+times = "index,t0,t1,t2,t3,t4\n";
+tab = [];
+speeds = "d_over_h,speed_over_sqrt_gh\n";
+for (k in range(0, 5)) {
+  let rows = csv_parse(read_file("build/examples/domino_" + str(k) + ".csv"));
+  let tk = [];
+  for (i in range(0, 16)) {
+    let found = -1.0;
+    for (row in rows) {
+      if (found < 0.0 && abs(num(row["d" + str(i) + ".qy"])) > 0.08715574274765817) { found = num(row["t"]); }
+    }
+    assert(found > 0.0, "domino " + str(i) + " of row " + str(k) + " did not fall");
+    push(tk, found);
+  }
+  push(tab, tk);
+  # Steady speed from dominoes 6..13 (the last ones fall onto the floor with nothing in front).
+  let dd = 0.2 * (0.3 + 0.125 * k);
+  let v = 7.0 * dd / (tk[13] - tk[6]);
+  speeds = speeds + sprintf("%.4f,%.4f\n", 0.3 + 0.125 * k, v / sqrt(9.81 * 0.2));
+  println(sprintf("spacing %.3f h: steady wave speed %.2f m/s = %.2f sqrt(g h)", 0.3 + 0.125 * k, v, v / sqrt(9.81 * 0.2)));
+  assert(v > 0.7 && v < 3.0);
+}
+for (i in range(0, 16)) {
+  times = times + sprintf("%d,%.4f,%.4f,%.4f,%.4f,%.4f\n", i, tab[0][i], tab[1][i], tab[2][i], tab[3][i], tab[4][i]);
+}
+write_file("build/examples/domino_times.csv", times);
+write_file("build/examples/domino_speeds.csv", speeds);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/domino_cascade.png", 1100, 480);
+plot.cmd("set datafile separator ','");
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set title 'When each domino starts to fall (tilt passes 10 degrees)'");
+plot.cmd("set xlabel 'domino number'");
+plot.cmd("set ylabel 'time [s]'");
+plot.cmd("set grid");
+plot.cmd("set key top left box opaque");
+plot.cmd("plot for [k=2:6] 'build/examples/domino_times.csv' skip 1 using 1:k with linespoints lw 2 pt 7 ps 0.7 lc rgb word('#1f77b4 #2ca02c #ff7f0e #d62728 #9467bd', k-1) title sprintf('d = %.2f h', 0.3 + 0.125*(k-2))");
+plot.cmd("set title 'Steady wave speed against spacing'");
+plot.cmd("set xlabel 'spacing d / h'");
+plot.cmd("set ylabel 'speed / sqrt(g h)'");
+plot.cmd("set xrange [0.2:0.85]");
+plot.cmd("set yrange [0:*]");
+plot.cmd("unset key");
+plot.cmd("plot 'build/examples/domino_speeds.csv' skip 1 using 1:2 with linespoints lw 3 pt 7 ps 1.4 lc rgb '#d62728'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/domino_cascade-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/domino_cascade-draw.dslb;
+assert(r.code == 0);
+println("wrote images/domino_cascade.png");
+
+# Render the d = 0.5 h row when domino 8 is about to fall.
+rows = csv_parse(read_file("build/examples/domino_2.csv"));
+frame = rows[0];
+for (row in rows) { if (num(row["t"]) <= tab[2][8] - 0.03) { frame = row; } }
+for (i in range(0, 16)) { pose_box_obj(frame, "d" + str(i), 0.03, 0.1, 0.2, "build/examples/domino_r" + str(i) + ".obj"); }
+
+render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+let ivory = scene.material(0.9, 0.87, 0.8, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0);
+let black = scene.material(0.02, 0.02, 0.025, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0);
+for (i in range(0, 16)) {
+  let b = scene.import_obj("build/examples/domino_r" + str(i) + ".obj");
+  if (i % 2 == 0) { b.set_material(ivory); } else { b.set_material(black); }
+}
+scene.ground_plane(0.0, 100.0, 0.16, 0.24, 0.2);
+scene.area_light(-0.5, -1.5, 1.6, 0.8, 0.0, 0.0, 1.0, 0.9, 0.8, 160.0, 1.0);
+scene.area_light(2.2, 1.0, 1.0, 0.8, 0.0, 0.0, 0.6, 0.75, 1.0, 60.0, 1.0);
+scene.world_color(0.6, 0.7, 0.85, 0.35);
+scene.camera_look_at(-0.45, -1.35, 0.55, 0.72, 0.0, 0.04, 34.0);
+scene.set_view_transform("AgX");
+scene.render_settings(6, 17, true);
+scene.render_png("images/domino_cascade_render.png", 48, 900, 520);
+end _dsl_
+savedsl(render, "build/domino_cascade-render.dslb");
+argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/domino_cascade-render.dslb");
+r = system(argv, 300000);
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/domino_cascade_render.png");

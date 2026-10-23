@@ -1,0 +1,82 @@
+# Two 1 m pendulums joined by a weak spring: start one swinging and the other at rest, and the swing wanders over to
+# the second pendulum and back -- beats. The two normal modes (in phase, w1 = sqrt(g/L); against each other,
+# w2 = sqrt(g/L + 2k/m)) drift in and out of step, and the energy changes hands every pi / (w2 - w1) = 5.4 s.
+# lmphysics simulates the pendulums on revolute joints (HHT) with the spring between the bobs, checks the energy
+# transfer time against the mode formula, and lmplot draws the swings and the energy of each pendulum.
+# Output: images/coupled_pendulums.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s = phys.system("nsc");
+s.integrator("hht").timestep(0.001).record_every(10);
+let top = s.ground("top");
+let a0 = 0.1;
+let L = 1.0;
+let r = 0.05;
+let rho = 1.0 / (4.0 / 3.0 * 3.141592653589793 * r * r * r);
+let a = s.sphere("a", r, rho).pos(L * sin(a0), 0.0, -L * cos(a0));
+let b = s.sphere("b", r, rho).pos(0.5, 0.0, -L);
+s.revolute("ha", top, a, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+s.revolute("hb", top, b, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0);
+# Spring k = 2 N/m relaxed at the rest spacing of 0.5 m.
+s.spring("k", a, b, 2.0, 0.0, 0.5);
+s.record("a", "x,z,vx,vz").record("b", "x,z,vx,vz");
+let e0 = s.energy();
+s.run(22.0);
+phys.assert_close(s.energy() - e0, 0.0, 0.00001);
+s.save_csv("build/examples/coupled_pendulums.csv");
+end _dsl_
+savedsl(sim, "build/coupled_pendulums-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/coupled_pendulums-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# Energy of each pendulum (kinetic + gravitational, zero at the bottom; the spring holds the rest), and
+# the mode formula with the bob's own inertia (I = 2/5 m r^2 about its centre): w^2 = (m g L + c k L^2) / (m L^2 + I).
+m = 1.0;
+I = 0.4 * 0.05 * 0.05;
+w1 = sqrt(9.81 * 1.0 / (1.0 + I));
+w2 = sqrt((9.81 + 2.0 * 2.0) / (1.0 + I));
+t_swap = 3.141592653589793 / (w2 - w1);
+rows = csv_parse(read_file("build/examples/coupled_pendulums.csv"));
+out = "t,theta_a,theta_b,ea,eb\n";
+# Reference: everything at the start, the raised bob plus the spring it squeezes (k = 2 N/m, 0.1 m).
+e_ref = 9.81 * (1.0 - 0.9950041652780258) + 0.5 * 2.0 * (0.5 - sqrt((0.5 - 0.09983341664682815) * (0.5 - 0.09983341664682815) + (1.0 - 0.9950041652780258) * (1.0 - 0.9950041652780258))) * (0.5 - sqrt((0.5 - 0.09983341664682815) * (0.5 - 0.09983341664682815) + (1.0 - 0.9950041652780258) * (1.0 - 0.9950041652780258)));
+t_max = 0.0;
+eb_max = 0.0;
+for (row in rows) {
+  let t = num(row["t"]);
+  let ea = 0.5 * (num(row["a.vx"]) * num(row["a.vx"]) + num(row["a.vz"]) * num(row["a.vz"])) + 9.81 * (num(row["a.z"]) + 1.0);
+  let eb = 0.5 * (num(row["b.vx"]) * num(row["b.vx"]) + num(row["b.vz"]) * num(row["b.vz"])) + 9.81 * (num(row["b.z"]) + 1.0);
+  if (t < 8.0 && eb > eb_max) { eb_max = eb; t_max = t; }
+  out = out + sprintf("%.3f,%.5f,%.5f,%.6f,%.6f\n", t, num(row["a.x"]), num(row["b.x"]) - 0.5, ea / e_ref, eb / e_ref);
+}
+write_file("build/examples/coupled_energy.csv", out);
+println(sprintf("energy reaches the second pendulum after %.2f s (pi / (w2 - w1) = %.2f s), %.0f%% of it", t_max, t_swap, 100.0 * eb_max / e_ref));
+assert(abs(t_max - t_swap) < 0.3 && eb_max / e_ref > 0.9);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/coupled_pendulums.png", 900, 640);
+plot.cmd("set datafile separator ','");
+plot.cmd("set multiplot layout 2,1");
+plot.cmd("set title 'Two pendulums joined by a weak spring (lmphysics): the swing changes hands'");
+plot.cmd("set ylabel 'horizontal swing [m]'");
+plot.cmd("set grid");
+plot.cmd("set xrange [0:22]");
+plot.cmd("set key top right box opaque horizontal");
+plot.cmd("set yrange [-0.13:0.16]");
+plot.cmd("plot 'build/examples/coupled_energy.csv' skip 1 using 1:2 with lines lw 1.5 lc rgb '#d62728' title 'pendulum A (released)', '' skip 1 using 1:3 with lines lw 1.5 lc rgb '#1f77b4' title 'pendulum B (at rest)'");
+plot.cmd("set title 'Energy of each pendulum'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'share of the total energy'");
+plot.cmd("set yrange [0:1.25]");
+plot.cmd("set arrow 1 from 5.37,1.05 to 5.37,0.0 nohead dt 2 lc rgb '#555555'");
+plot.cmd("set label 1 'pi / (w2 - w1) = 5.4 s' at 5.6,1.1");
+plot.cmd("plot 'build/examples/coupled_energy.csv' skip 1 using 1:4 with lines lw 2.5 lc rgb '#d62728' title 'pendulum A', '' skip 1 using 1:5 with lines lw 2.5 lc rgb '#1f77b4' title 'pendulum B'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/coupled_pendulums-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/coupled_pendulums-draw.dslb;
+assert(r.code == 0);
+println("wrote images/coupled_pendulums.png");

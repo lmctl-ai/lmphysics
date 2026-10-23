@@ -1,0 +1,112 @@
+# Newton's cradle: five 5 cm steel balls on 30 cm pendulums, the left one released at 29 degrees. The impulse runs
+# through the three resting balls and launches the right one to almost the same height; then back again. With
+# restitution 0.98 (not 1) a little momentum stays behind each time, and the middle balls slowly start to swing
+# together -- exactly what a real desk toy does after a few clacks. NSC contact with zero collision margins and
+# 0.5 mm gaps between the balls (simultaneous impulses through touching balls do not give the textbook result).
+# lmplot draws each ball's swing; lmblender renders the cradle at the right ball's first apex.
+# Output: images/newtons_cradle.png, images/newtons_cradle_render.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s = phys.system("nsc");
+s.material("steel", 0.0, 0.98).timestep(0.0001).collision_margins(0.0, 0.0).solver("psor", 200).bounce_speed(0.01).record_every(20);
+let top = s.ground("top");
+let r = 0.025;
+let L = 0.3;
+let gap = 0.0005;
+let a0 = 0.5;
+for (i in range(0, 5)) {
+  let x = (float(i) - 2.0) * (2.0 * r + gap);
+  let b = s.sphere("b" + str(i), r, 7800.0).collide("steel");
+  if (i == 0) { b.pos(x - L * sin(a0), 0.0, L - L * cos(a0)); } else { b.pos(x, 0.0, 0.0); }
+  s.revolute("h" + str(i), top, b, x, 0.0, L, 0.0, 1.0, 0.0);
+  s.record("b" + str(i), "x,z,vx");
+}
+let e0 = s.energy();
+s.run(6.0);
+s.save_csv("build/examples/newtons_cradle.csv");
+end _dsl_
+savedsl(sim, "build/newtons_cradle-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/newtons_cradle-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# First apex of the right ball: its velocity changes sign after the first impact.
+rows = csv_parse(read_file("build/examples/newtons_cradle.csv"));
+apex = -1;
+for (k in range(1, rows.len())) {
+  if (apex < 0 && rows[k]["t"] > 0.3 && num(rows[k - 1]["b4.vx"]) > 0.0 && num(rows[k]["b4.vx"]) <= 0.0) { apex = k; }
+}
+assert(apex > 0);
+row = rows[apex];
+R = 0.025;
+L = 0.3;
+# Height reached by the right ball against the release height of the left one (1 - cos 0.5 of L).
+h_in = L * (1.0 - 0.8775825618903728);
+h_out = num(row["b4.z"]);
+println(sprintf("right ball apex at t = %.3f s: %.1f mm high, %.1f%% of the release height", row["t"], 1000.0 * h_out, 100.0 * h_out / h_in));
+assert(h_out / h_in > 0.85 && h_out / h_in < 1.0);
+x0 = num(row["b0.x"]); x1 = num(row["b1.x"]); x2 = num(row["b2.x"]); x3 = num(row["b3.x"]); x4 = num(row["b4.x"]);
+z0 = num(row["b0.z"]); z1 = num(row["b1.z"]); z2 = num(row["b2.z"]); z3 = num(row["b3.z"]); z4 = num(row["b4.z"]);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/newtons_cradle.png", 900, 560);
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Newton''s cradle: swing of each ball (lmphysics, restitution 0.98)'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'horizontal displacement from rest [mm]'");
+plot.cmd("set grid");
+plot.cmd("set key top center horizontal box opaque");
+plot.cmd("set xrange [0:6]");
+plot.cmd("set yrange [-150:200]");
+plot.cmd("plot 'build/examples/newtons_cradle.csv' skip 1 using 1:(1000*($2+0.101)) with lines lw 2 lc rgb '#d62728' title 'ball 1 (released)', '' skip 1 using 1:(1000*$8) with lines lw 3 lc rgb '#2ca02c' title 'balls 2, 3, 4 (overlapping: they drift together)', '' skip 1 using 1:(1000*($14-0.101)) with lines lw 2 lc rgb '#1f77b4' title 'ball 5'");
+plot.close();
+end _dsl_
+savedsl(draw, "build/newtons_cradle-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/newtons_cradle-draw.dslb;
+assert(r.code == 0);
+println("wrote images/newtons_cradle.png");
+
+render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+let steel = scene.material(0.85, 0.86, 0.88, 1.0, 0.12, 0.0, 0.0, 0.0, 0.0, 0.0);
+let wood = scene.material(0.36, 0.2, 0.09, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0);
+let chrome = scene.material(0.7, 0.7, 0.72, 1.0, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0);
+let thread = scene.material(0.9, 0.9, 0.85, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0);
+# Frame: two rails 0.3 m above the balls, four posts, a wooden base 6 cm below the hanging balls.
+let rail1 = scene.tube_between(-0.2, -0.08, 0.3, 0.2, -0.08, 0.3, 0.004); rail1.set_material(chrome);
+let rail2 = scene.tube_between(-0.2, 0.08, 0.3, 0.2, 0.08, 0.3, 0.004); rail2.set_material(chrome);
+let p1 = scene.tube_between(-0.2, -0.08, -0.06, -0.2, -0.08, 0.3, 0.005); p1.set_material(chrome);
+let p2 = scene.tube_between(-0.2, 0.08, -0.06, -0.2, 0.08, 0.3, 0.005); p2.set_material(chrome);
+let p3 = scene.tube_between(0.2, -0.08, -0.06, 0.2, -0.08, 0.3, 0.005); p3.set_material(chrome);
+let p4 = scene.tube_between(0.2, 0.08, -0.06, 0.2, 0.08, 0.3, 0.005); p4.set_material(chrome);
+let base = scene.cube(1.0); base.scale(0.46, 0.22, 0.02); base.translate(0.0, 0.0, -0.07); base.set_material(wood);
+for (i in range(0, 5)) {
+  let px = (float(i) - 2.0) * 0.0505;
+  let bx = ${x0};
+  let bz = ${z0};
+  if (i == 1) { bx = ${x1}; bz = ${z1}; }
+  if (i == 2) { bx = ${x2}; bz = ${z2}; }
+  if (i == 3) { bx = ${x3}; bz = ${z3}; }
+  if (i == 4) { bx = ${x4}; bz = ${z4}; }
+  let ball = scene.uv_sphere(0.025, 48, 24, true);
+  ball.translate(bx, 0.0, bz);
+  ball.set_material(steel);
+  # Two threads per ball in a V, so it swings in one plane.
+  let t1 = scene.tube_between(px, -0.08, 0.3, bx, 0.0, bz, 0.0007); t1.set_material(thread);
+  let t2 = scene.tube_between(px, 0.08, 0.3, bx, 0.0, bz, 0.0007); t2.set_material(thread);
+}
+scene.ground_plane(-0.08, 50.0, 0.12, 0.13, 0.15);
+scene.area_light(-0.6, -0.8, 1.2, 0.0, 0.0, 0.0, 1.0, 0.92, 0.82, 120.0, 0.8);
+scene.area_light(0.8, 0.4, 0.8, 0.0, 0.0, 0.0, 0.6, 0.75, 1.0, 50.0, 0.6);
+scene.world_color(0.55, 0.6, 0.7, 0.35);
+scene.camera_look_at(0.22, -0.95, 0.34, 0.0, 0.0, 0.11, 30.0);
+scene.set_view_transform("AgX");
+scene.render_settings(6, 17, true);
+scene.render_png("images/newtons_cradle_render.png", 48, 900, 600);
+end _dsl_
+savedsl(render, "build/newtons_cradle-render.dslb");
+argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/newtons_cradle-render.dslb");
+r = system(argv, 300000);
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/newtons_cradle_render.png");

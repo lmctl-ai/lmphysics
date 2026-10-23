@@ -1,0 +1,126 @@
+# A crank-rocker four-bar linkage, the mechanism inside windscreen wipers, film projectors and walking toys. Ground
+# 40 cm, crank 10 cm, coupler 35 cm, rocker 30 cm: shortest + longest <= the other two (Grashof), so the crank turns
+# fully while the rocker swings between two limits. A point riding on the coupler traces a closed coupler curve --
+# the shape designers pick a linkage for. lmphysics drives the crank at one turn per second (motor, trapezoidal
+# integrator for the redundant planar joints); the script checks the rocker limits against the law of cosines and
+# lmdraw draws the linkage at twelve crank angles with the coupler curve.
+# Output: images/four_bar_linkage.png   (run: lmctl autorun <raw url of this file>)
+import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536a04b8d4448162c4a229d6/examples/bridge/pose_obj.lms";
+mkdir("build/examples");
+mkdir("build/rendered");
+mkdir("images");
+# lmscript has no atan outside _dsl_ blocks: atan2 from two argument halvings and a short series.
+fn atan2s(y, x) {
+  let pi = 3.141592653589793;
+  if (x == 0.0) { if (y > 0.0) { return pi / 2.0; } return -pi / 2.0; }
+  let z = y / x;
+  let k = 1.0;
+  if (abs(z) > 1.0) { z = 1.0 / z; k = -1.0; }
+  z = z / (1.0 + sqrt(1.0 + z * z));
+  z = z / (1.0 + sqrt(1.0 + z * z));
+  let s = 0.0; let p = z;
+  for (n in range(0, 12)) { s = s + p / (2.0 * n + 1.0); p = -p * z * z; }
+  let a = 4.0 * s;
+  if (k < 0.0) { if (a > 0.0) { a = pi / 2.0 - a; } else { a = -pi / 2.0 - a; } }
+  if (x < 0.0) { if (y >= 0.0) { a = a + pi; } else { a = a - pi; } }
+  return a;
+}
+g = 0.4; r2 = 0.1; r3 = 0.35; r4 = 0.3;
+# Start: crank along +x, B = (0.1, 0); C where the coupler and rocker circles meet (upper branch).
+bx = r2; bz = 0.0;
+d = g - bx;
+cx = bx + (d * d + r3 * r3 - r4 * r4) / (2.0 * d);
+cz = sqrt(r3 * r3 - (cx - bx) * (cx - bx));
+phi = atan2s(cz - bz, cx - bx);
+psi = atan2s(cz, cx - g);
+mx = (bx + cx) / 2.0; mz = (bz + cz) / 2.0;
+rx = (g + cx) / 2.0; rz = cz / 2.0;
+
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s = phys.system("nsc");
+s.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").solver("psor", 200).timestep(0.0005).record_every(10);
+let frame = s.ground("frame");
+# Links are thin bars along their local x; a rotation about +y by -angle tilts x up into the x-z plane.
+let crank = s.box("crank", ${r2}, 0.02, 0.02, 2700.0).pos(${r2} / 2.0, 0.0, 0.0);
+let coupler = s.box("coupler", ${r3}, 0.02, 0.02, 2700.0).pos(${mx}, 0.0, ${mz}).rot_axis(0.0, 1.0, 0.0, -1.0 * ${phi});
+let rocker = s.box("rocker", ${r4}, 0.02, 0.02, 2700.0).pos(${rx}, 0.0, ${rz}).rot_axis(0.0, 1.0, 0.0, -1.0 * ${psi});
+# Driven counter-clockwise seen from -y (towards +z from +x): about -y.
+s.motor_speed("drive", frame, crank, 0.0, 0.0, 0.0, 0.0, -1.0, 0.0, "6.283185307179586");
+s.revolute("b", crank, coupler, ${bx}, 0.0, 0.0, 0.0, 1.0, 0.0);
+s.revolute("c", coupler, rocker, ${cx}, 0.0, ${cz}, 0.0, 1.0, 0.0);
+s.revolute("o4", frame, rocker, ${g}, 0.0, 0.0, 0.0, 1.0, 0.0);
+s.record("crank", "x,y,z,qw,qx,qy,qz").record("coupler", "x,y,z,qw,qx,qy,qz").record("rocker", "x,y,z,qw,qx,qy,qz");
+s.run(1.0);
+s.save_csv("build/examples/four_bar.csv");
+end _dsl_
+savedsl(sim, "build/four_bar_linkage-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/four_bar_linkage-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+rows = csv_parse(read_file("build/examples/four_bar.csv"));
+# Pixels: 900 per metre, O2 at (230, 420), z up.
+fn px(x) { return 230.0 + 900.0 * x; }
+fn pz(z) { return 420.0 - 900.0 * z; }
+curve = "";
+cmin = 10.0; cmax = -10.0;
+links = [];
+for (k in range(0, rows.len())) {
+  let row = rows[k];
+  let B = pose_point(row, "crank", [0.05, 0.0, 0.0]);
+  let C = pose_point(row, "rocker", [0.15, 0.0, 0.0]);
+  let C2 = pose_point(row, "coupler", [0.175, 0.0, 0.0]);
+  let P = pose_point(row, "coupler", [0.0, 0.0, 0.12]);
+  # The joints hold: both bodies put C in the same place, and the rocker keeps its length to O4.
+  assert(abs(C[0] - C2[0]) < 0.001 && abs(C[2] - C2[2]) < 0.001);
+  assert(abs(sqrt((C[0] - 0.4) * (C[0] - 0.4) + C[2] * C[2]) - 0.3) < 0.001);
+  cmin = min(cmin, C[0]); cmax = max(cmax, C[0]);
+  curve = curve + sprintf("%.1f,%.1f ", px(P[0]), pz(P[2]));
+  if (k % 17 == 0 && k < 200) { push(links, [B, C, P]); }
+}
+# Rocker limits: crank and coupler in line, O2C = r3 - r2 or r3 + r2; then C.x = (g^2 + O2C^2 - r4^2) / (2 g).
+lo = (g * g + (r3 - r2) * (r3 - r2) - r4 * r4) / (2.0 * g);
+hi = (g * g + (r3 + r2) * (r3 + r2) - r4 * r4) / (2.0 * g);
+println(sprintf("rocker tip x between %.4f and %.4f m (law of cosines %.4f, %.4f)", cmin, cmax, lo, hi));
+assert(abs(cmin - lo) < 0.002 && abs(cmax - hi) < 0.002);
+fn seg(a, b) { return sprintf("M %.1f,%.1f L %.1f,%.1f", px(a[0]), pz(a[2]), px(b[0]), pz(b[2])); }
+ghosts = "";
+for (L in links) { ghosts = ghosts + seg([0.0, 0.0, 0.0], L[0]) + " " + seg(L[0], L[1]) + " " + seg(L[1], [0.4, 0.0, 0.0]) + " "; }
+H = links[2];
+crank_p = seg([0.0, 0.0, 0.0], H[0]);
+coup_p = sprintf("M %.1f,%.1f L %.1f,%.1f L %.1f,%.1f Z", px(H[0][0]), pz(H[0][2]), px(H[1][0]), pz(H[1][2]), px(H[2][0]), pz(H[2][2]));
+rock_p = seg(H[1], [0.4, 0.0, 0.0]);
+hx = px(H[2][0]); hz = pz(H[2][2]);
+bpx = px(H[0][0]); bpz = pz(H[0][2]);
+cpx = px(H[1][0]); cpz = pz(H[1][2]);
+lim = sprintf("rocker swings between x = %.3f and %.3f m: law of cosines %.3f and %.3f m", cmin, cmax, lo, hi);
+
+d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 600, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Four-bar linkage: a crank-rocker and its coupler curve", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Ground 40 cm, crank 10 cm, coupler 35 cm, rocker 30 cm. Faint: twelve crank angles simulated by lmphysics.", "#9fb3c8");
+scene.path(${ghosts}, "none", "#2a3d50", 1.2);
+scene.polyline(${curve}, "#ffd166", 2.5);
+scene.path(${coup_p}, "#2b4a6b", "#9fc6ff", 3.0).set_attr("fill-opacity", "0.6");
+scene.path(${crank_p}, "none", "#ff6b6b", 6.0).set_attr("stroke-linecap", "round");
+scene.path(${rock_p}, "none", "#7bd88f", 6.0).set_attr("stroke-linecap", "round");
+scene.rect(205.0, 420.0, 50.0, 14.0, "#5b7690");
+scene.rect(565.0, 420.0, 50.0, 14.0, "#5b7690");
+scene.circle(230.0, 420.0, 6.0, "#e6edf3");
+scene.circle(590.0, 420.0, 6.0, "#e6edf3");
+scene.circle(${bpx}, ${bpz}, 5.0, "#e6edf3");
+scene.circle(${cpx}, ${cpz}, 5.0, "#e6edf3");
+scene.circle(${hx}, ${hz}, 7.0, "#ffd166");
+scene.text(190.0, 460.0, 14.0, "crank (motor, 1 turn/s)", "#ff6b6b");
+scene.text(560.0, 460.0, 14.0, "rocker", "#7bd88f");
+scene.text(${hx} + 12.0, ${hz} - 10.0, 14.0, "coupler point", "#ffd166");
+scene.text(40.0, 540.0, 14.0, ${lim}, "#e6edf3");
+scene.text(40.0, 562.0, 13.0, "The joints close the loop in every recorded step to 1 mm (trapezoidal integrator, PSOR).", "#9fb3c8");
+scene.render_png("build/rendered/four_bar_linkage.png", 900, 600, 1);
+end _dsl_
+savedsl(d, "build/four_bar_linkage-draw.dslb");
+r = system ${dsl_cli(d)} --dsl build/four_bar_linkage-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/four_bar_linkage.png", "images/four_bar_linkage.png");
+println("wrote images/four_bar_linkage.png");

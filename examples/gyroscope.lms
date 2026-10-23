@@ -1,0 +1,133 @@
+# Why a spinning top does not fall: a 4.9 kg steel disc (r = 10 cm) spins on a horizontal axle whose end rests on a
+# ball joint 10 cm from the disc. Gravity's torque m g d does not tip the axle down; it swings the spin angular
+# momentum sideways, so the axle precesses about the vertical at Omega = m g d / (I w). lmphysics releases the disc
+# at seven spin rates from 30 to 240 rad/s; the measured precession approaches the formula as the spin grows, and
+# the dip of the axle (nutation) shrinks as 1/w^2. lmplot draws both; lmblender renders the gyroscope with its spin
+# angular momentum, the torque of gravity and the precession vector.
+# Output: images/gyroscope.png, images/gyroscope_render.png   (run: lmctl autorun <raw url of this file>)
+import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536a04b8d4448162c4a229d6/examples/bridge/pose_obj.lms";
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+for (k in range(0, 7)) {
+  let w = 30.0;
+  if (k == 1) { w = 45.0; }
+  if (k == 2) { w = 60.0; }
+  if (k == 3) { w = 90.0; }
+  if (k == 4) { w = 120.0; }
+  if (k == 5) { w = 180.0; }
+  if (k == 6) { w = 240.0; }
+  let s = phys.system("nsc");
+  s.integrator("hht").timestep(0.0002).record_every(25);
+  let pivot = s.ground("pivot");
+  # Cylinder axis is local y; turned -90 degrees about z it points along +x, away from the pivot.
+  let disc = s.cylinder("disc", 0.1, 0.02, 7800.0).rot_axis(0.0, 0.0, 1.0, -1.5707963267948966).pos(0.1, 0.0, 0.0).omega(w, 0.0, 0.0);
+  s.spherical("ball", pivot, disc, 0.0, 0.0, 0.0);
+  s.record("disc", "x,y,z,qw,qx,qy,qz");
+  let e0 = s.energy();
+  s.run(4.0);
+  phys.assert_close((s.energy() - e0) / (disc.mass() * 9.81 * 0.1), 0.0, 0.001);
+  s.save_csv("build/examples/gyro_" + str(k) + ".csv");
+}
+end _dsl_
+savedsl(sim, "build/gyroscope-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/gyroscope-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# Precession rate: unwrapped azimuth of the disc centre after 4 s. lmscript has no atan2 outside _dsl_ blocks,
+# so the azimuth is counted by summing small-angle steps (cross / dot of consecutive centre vectors).
+spins = [30.0, 45.0, 60.0, 90.0, 120.0, 180.0, 240.0];
+out = "w,omega_sim,omega_formula,dip_mm\n";
+m = 7800.0 * 3.141592653589793 * 0.01 * 0.02;
+I3 = 0.5 * m * 0.01;
+for (k in range(0, 7)) {
+  let rows = csv_parse(read_file("build/examples/gyro_" + str(k) + ".csv"));
+  let ang = 0.0;
+  let dip = 0.0;
+  for (j in range(1, rows.len())) {
+    let x0 = num(rows[j - 1]["disc.x"]); let y0 = num(rows[j - 1]["disc.y"]);
+    let x1 = num(rows[j]["disc.x"]); let y1 = num(rows[j]["disc.y"]);
+    ang = ang + (x0 * y1 - y0 * x1) / (x0 * x1 + y0 * y1);
+    dip = min(dip, num(rows[j]["disc.z"]));
+  }
+  let om = ang / 4.0;
+  let formula = m * 9.81 * 0.1 / (I3 * spins[k]);
+  out = out + sprintf("%.1f,%.5f,%.5f,%.3f\n", spins[k], om, formula, -1000.0 * dip);
+  println(sprintf("spin %5.0f rad/s: precession %.3f rad/s, m g d / (I w) = %.3f, axle dips %.1f mm", spins[k], om, formula, -1000.0 * dip));
+  if (spins[k] >= 90.0) { assert(abs(om / formula - 1.0) < 0.03); }
+}
+write_file("build/examples/gyroscope.csv", out);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/gyroscope.png", 1100, 480);
+plot.cmd("set datafile separator ','");
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set title 'Precession rate against spin rate'");
+plot.cmd("set xlabel 'spin w [rad/s]'");
+plot.cmd("set ylabel 'precession Omega [rad/s]'");
+plot.cmd("set logscale xy");
+plot.cmd("set grid");
+plot.cmd("set key top right box opaque");
+plot.cmd("set xrange [25:280]");
+plot.cmd("set xtics (30, 60, 120, 240)");
+plot.cmd("m = 7800*pi*0.01*0.02; I = 0.5*m*0.01");
+plot.cmd("plot m*9.81*0.1/(I*x) with lines lw 3 lc rgb '#bbbbbb' title 'm g d / (I w)', 'build/examples/gyroscope.csv' skip 1 using 1:2 with points pt 7 ps 1.5 lc rgb '#d62728' title 'lmphysics'");
+plot.cmd("unset logscale");
+plot.cmd("set xtics autofreq");
+plot.cmd("set title 'Height of the disc centre after release (nutation)'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'z [mm]'");
+plot.cmd("set xrange [0:2]");
+plot.cmd("set yrange [-70:5]");
+plot.cmd("set key bottom right box opaque");
+plot.cmd("plot 'build/examples/gyro_0.csv' skip 1 using 1:(1000*$4) with lines lw 2 lc rgb '#1f77b4' title 'w = 30 rad/s', 'build/examples/gyro_2.csv' skip 1 using 1:(1000*$4) with lines lw 2 lc rgb '#2ca02c' title 'w = 60 rad/s', 'build/examples/gyro_4.csv' skip 1 using 1:(1000*$4) with lines lw 2 lc rgb '#d62728' title 'w = 120 rad/s'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/gyroscope-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/gyroscope-draw.dslb;
+assert(r.code == 0);
+println("wrote images/gyroscope.png");
+
+# One moment of the 120 rad/s run, with the vectors that explain it.
+rows = csv_parse(read_file("build/examples/gyro_4.csv"));
+pose_cylinder_obj(rows[0], "disc", 0.1, 0.02, 96, "build/examples/gyro_disc.obj");
+
+render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+let steel = scene.material(0.75, 0.76, 0.78, 1.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0);
+let brass = scene.material(0.8, 0.6, 0.25, 1.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0);
+let dark = scene.material(0.1, 0.1, 0.12, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0);
+let red = scene.material(0.8, 0.03, 0.02, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0);
+let green = scene.material(0.02, 0.45, 0.08, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0);
+let gold = scene.material(0.9, 0.55, 0.02, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0);
+let ink = scene.material(0.92, 0.92, 0.9, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0);
+let post = scene.tube_between(0.0, 0.0, -0.45, 0.0, 0.0, -0.012, 0.012); post.set_material(dark);
+let foot = scene.cylinder(0.12, 0.02, 64, true); foot.translate(0.0, 0.0, -0.45); foot.set_material(dark);
+let ball = scene.uv_sphere(0.018, 32, 16, true); ball.set_material(brass);
+let d = scene.import_obj("build/examples/gyro_disc.obj"); d.set_material(steel);
+let axle = scene.tube_between(0.0, 0.0, 0.0, 0.13, 0.0, 0.0, 0.006); axle.set_material(brass);
+# Path of the disc centre: a horizontal circle of radius 0.1 m around the post.
+let path = scene.torus(0.1, 0.002, 96, 8, true); path.set_material(gold);
+# L along the spin axis, gravity's torque m g d sideways (+y), precession Omega up (+z).
+let aL = scene.arrow_between(0.13, 0.0, 0.0, 0.34, 0.0, 0.0, 0.004); aL.set_material(red);
+let aT = scene.arrow_between(0.0, 0.025, 0.0, 0.0, 0.24, 0.0, 0.004); aT.set_material(green);
+let aW = scene.arrow_between(0.0, 0.0, 0.03, 0.0, 0.0, 0.24, 0.004); aW.set_material(gold);
+let tL = scene.label("SPIN L", 0.0, 0.0, 0.0, 0.03); tL.rotate_x(90.0); tL.rotate_z(-25.0); tL.translate(0.25, 0.0, 0.025); tL.set_material(red);
+let tT = scene.label("TORQUE", 0.0, 0.0, 0.0, 0.03); tT.rotate_x(90.0); tT.rotate_z(-25.0); tT.translate(-0.06, 0.28, 0.0); tT.set_material(green);
+let tW = scene.label("PRECESSION", 0.0, 0.0, 0.0, 0.03); tW.rotate_x(90.0); tW.rotate_z(-25.0); tW.translate(0.02, 0.0, 0.25); tW.set_material(gold);
+scene.ground_plane(-0.46, 50.0, 0.22, 0.24, 0.27);
+scene.area_light(-0.8, -1.2, 1.5, 0.0, 0.0, 0.0, 1.0, 0.92, 0.82, 180.0, 1.0);
+scene.area_light(1.2, 0.6, 0.9, 0.0, 0.0, 0.0, 0.6, 0.75, 1.0, 60.0, 1.0);
+scene.world_color(0.6, 0.65, 0.75, 0.35);
+scene.camera_look_at(-0.55, -1.15, 0.55, 0.1, 0.06, -0.06, 34.0);
+scene.set_view_transform("AgX");
+scene.render_settings(6, 17, true);
+scene.render_png("images/gyroscope_render.png", 48, 900, 600);
+end _dsl_
+savedsl(render, "build/gyroscope-render.dslb");
+argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/gyroscope-render.dslb");
+r = system(argv, 300000);
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/gyroscope_render.png");

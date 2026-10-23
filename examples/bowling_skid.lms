@@ -1,0 +1,109 @@
+# A bowling ball leaves the hand at 8 m/s without spin. It skids: kinetic friction mu m g slows the centre and, acting
+# at the contact point, spins the ball up. Rolling starts when v = w r, after t = 2 v0 / (7 mu g), at v = 5/7 v0 --
+# whatever the friction coefficient. lmphysics simulates the 7 kg ball on a floor with mu = 0.2 and checks the
+# closed form; lmdraw draws the free-body diagram next to the measured v(t) and w(t) r.
+# Output: images/bowling_skid.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("build/rendered");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let r = 0.108;
+let mu = 0.2;
+let g = 9.81;
+let v0 = 8.0;
+let w = phys.system("nsc");
+w.material("lane", mu, 0.0).timestep(0.0005).solver("psor", 100).record_every(10);
+w.floor("lane", "lane");
+# Start 2 mm above the lane: NSC contact makes a body that starts in contact with a speed hop once.
+let ball = w.sphere("ball", r, 7.0 / (4.0 / 3.0 * 3.141592653589793 * r * r * r)).pos(0.0, 0.0, r + 0.002).vel(v0, 0.0, 0.0).collide("lane");
+phys.assert_close(ball.mass(), 7.0, 0.000001);
+w.record("ball", "x,vx,wy");
+w.run(2.5);
+phys.assert_close(ball.vx(), 5.0 / 7.0 * v0, 0.02);
+phys.assert_close(ball.wy() * r, 5.0 / 7.0 * v0, 0.02);
+w.save_csv("build/examples/bowling_skid.csv");
+end _dsl_
+savedsl(sim, "build/bowling_skid-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/bowling_skid-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+R = 0.108;
+mu = 0.2;
+g = 9.81;
+v0 = 8.0;
+rows = csv_parse(read_file("build/examples/bowling_skid.csv"));
+# Measured end of skidding: first row where the contact point is at rest (|v - w r| < 1 cm/s).
+t_roll = -1.0;
+x_roll = 0.0;
+for (row in rows) {
+  if (t_roll < 0.0 && abs(num(row["ball.vx"]) - num(row["ball.wy"]) * R) < 0.01) { t_roll = num(row["t"]); x_roll = num(row["ball.x"]); }
+}
+t_form = 2.0 * v0 / (7.0 * mu * g);
+x_form = 12.0 / 49.0 * v0 * v0 / (mu * g);
+println(sprintf("rolling starts at t = %.3f s, x = %.2f m (closed form %.3f s, %.2f m)", t_roll, x_roll, t_form, x_form));
+assert(abs(t_roll - t_form) < 0.03 && abs(x_roll - x_form) < 0.15);
+
+# Chart area (pixels): time 0..2.5 s across, speed 0..9 m/s up.
+X0 = 470.0; Y0 = 120.0; W = 390.0; H = 330.0;
+fn tx(t) { return 470.0 + t / 2.5 * 390.0; }
+fn vy(v) { return 120.0 + 330.0 - v / 10.0 * 330.0; }
+vline = "";
+wline = "";
+for (row in rows) {
+  vline = vline + sprintf("%.1f %.1f ", tx(num(row["t"])), vy(num(row["ball.vx"])));
+  wline = wline + sprintf("%.1f %.1f ", tx(num(row["t"])), vy(num(row["ball.wy"]) * R));
+}
+mx = tx(t_form);
+my = vy(5.0 / 7.0 * v0);
+lab1 = sprintf("rolling from t = %.3f s (closed form %.3f s)", t_roll, t_form);
+lab2 = sprintf("v = 5/7 v0 = %.2f m/s after %.1f m of skid", 5.0 / 7.0 * v0, x_roll);
+fr = sprintf("friction mu m g = %.1f N", mu * 7.0 * g);
+wt = sprintf("m g = %.1f N", 7.0 * g);
+
+d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 560, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Bowling ball: skid, then roll at 5/7 of the release speed", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "7 kg ball released at 8 m/s with no spin, lane friction 0.2. Friction slows the ball and spins it up until v = w r.", "#9fb3c8");
+# Free-body diagram (left).
+scene.line(40.0, 400.0, 420.0, 400.0, "#5b7690", 3.0);
+scene.circle(220.0, 290.0, 110.0, "#2b4a6b").set_attr("stroke", "#9fc6ff").set_attr("stroke-width", "2");
+scene.circle(220.0, 290.0, 4.0, "#e6edf3");
+scene.arrow(220.0, 290.0, 330.0, 290.0, "#7fa8d0", 3.0);
+scene.text(250.0, 280.0, 14.0, "v (centre)", "#7fa8d0");
+scene.arrow(220.0, 290.0, 220.0, 380.0, "#ffd166", 3.0);
+scene.text(228.0, 345.0, 13.0, ${wt}, "#ffd166");
+scene.arrow(220.0, 400.0, 130.0, 400.0, "#ff6b6b", 4.0);
+scene.text(60.0, 430.0, 14.0, ${fr}, "#ff6b6b");
+scene.arrow(220.0, 400.0, 220.0, 180.0, "#7bd88f", 2.0).set_attr("stroke-dasharray", "6 4");
+scene.text(230.0, 172.0, 14.0, "N = m g (acts at the contact)", "#7bd88f");
+scene.path("M 120,240 A 112,112 0 0 1 160,195", "none", "#c792ea", 3.0);
+scene.arrow(160.0, 195.0, 172.0, 189.0, "#c792ea", 3.0);
+scene.text(40.0, 176.0, 14.0, "spin-up torque", "#c792ea");
+scene.text(40.0, 480.0, 14.0, "Friction at the contact point does two jobs:", "#e6edf3");
+scene.text(40.0, 502.0, 13.0, "  a = -mu g slows the centre;  alpha = 5 mu g / (2 r) spins the ball.", "#9fb3c8");
+scene.text(40.0, 522.0, 13.0, "  They meet at t = 2 v0 / (7 mu g), whatever mu is.", "#9fb3c8");
+# Chart (right).
+scene.rect(470.0, 120.0, 390.0, 330.0, "#121c26");
+scene.axes(470.0, 120.0, 390.0, 330.0, 0.0, 2.5, 0.0, 10.0, 5, "#7f97ad");
+scene.polyline(${vline}, "#7fa8d0", 3.0);
+scene.polyline(${wline}, "#c792ea", 3.0);
+scene.line(${mx}, 120.0, ${mx}, 450.0, "#5b7690", 1.5).set_attr("stroke-dasharray", "5 4");
+scene.circle(${mx}, ${my}, 6.0, "#ffd166");
+scene.text(665.0, 112.0, 14.0, "measured in lmphysics", "#e6edf3").set_attr("text-anchor", "middle");
+scene.text(560.0, 160.0, 14.0, "v, centre speed", "#7fa8d0");
+scene.text(560.0, 420.0, 14.0, "w r, spin speed", "#c792ea");
+scene.text(665.0, 492.0, 13.0, "time [s]", "#9fb3c8").set_attr("text-anchor", "middle");
+let yl = scene.text(436.0, 285.0, 13.0, "speed [m/s]", "#9fb3c8");
+yl.set_attr("text-anchor", "middle");
+yl.set_attr("transform", "rotate(-90 436 285)");
+scene.text(470.0, 520.0, 14.0, ${lab1}, "#ffd166");
+scene.text(470.0, 542.0, 14.0, ${lab2}, "#ffd166");
+scene.render_png("build/rendered/bowling_skid.png", 900, 560, 1);
+end _dsl_
+savedsl(d, "build/bowling_skid-draw.dslb");
+r = system ${dsl_cli(d)} --dsl build/bowling_skid-draw.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/bowling_skid.png", "images/bowling_skid.png");
+println("wrote images/bowling_skid.png");

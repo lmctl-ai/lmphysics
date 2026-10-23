@@ -1,0 +1,93 @@
+# The cracking whip in miniature: a 1.2 m chain of twelve aluminium links, hinged at one end, is released straight
+# and horizontal. The links near the pin stop first and hand their energy down the chain, so the free end speeds up
+# far beyond free fall: 8 m/s as it swings through the bottom, about 1.7 times what a stone dropped 1.15 m reaches.
+# Energy is conserved (HHT integrator, revolute joints); the speed comes from redistribution, not from nowhere.
+# lmplot draws the chain every 50 ms and the tip speed against free fall.
+# Output: images/chain_whip.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s = phys.system("nsc");
+s.integrator("hht").timestep(0.0002).record_every(25);
+let pin = s.ground("pin");
+let n = 12;
+let l = 0.1;
+let prev = pin;
+for (i in range(0, n)) {
+  # Cylinder axis is local y; turned 90 degrees about z it lies along x.
+  let b = s.cylinder("l" + str(i), 0.01, l, 2700.0).rot_axis(0.0, 0.0, 1.0, 1.5707963267948966).pos(l * (float(i) + 0.5), 0.0, 0.0);
+  s.revolute("j" + str(i), prev, b, l * float(i), 0.0, 0.0, 0.0, 1.0, 0.0);
+  s.record("l" + str(i), "x,y,z,vx,vz,qw,qx,qy,qz");
+  prev = b;
+}
+let m = 12.0 * 2700.0 * 3.141592653589793 * 0.0001 * l;
+s.run(0.7);
+# Released at rest with z = 0: the energy is 0 and must stay 0 (relative to m g L).
+phys.assert_close(s.energy() / (m * 9.81 * 1.2), 0.0, 0.001);
+s.save_csv("build/examples/chain_whip.csv");
+end _dsl_
+savedsl(sim, "build/chain_whip-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/chain_whip-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+rows = csv_parse(read_file("build/examples/chain_whip.csv"));
+# Strobe: the chain every 50 ms until it passes the bottom (pin, then link centres, then the free end).
+strobe = "";
+tip = "t,speed,freefall,drop_speed\n";
+vmax = 0.0;
+for (k in range(0, rows.len())) {
+  let row = rows[k];
+  let t = num(row["t"]);
+  let vx = num(row["l11.vx"]);
+  let vz = num(row["l11.vz"]);
+  # Tip: half a link beyond the last centre, along the last link (its local -y axis, from the quaternion).
+  let w = num(row["l11.qw"]); let qx = num(row["l11.qx"]); let qy = num(row["l11.qy"]); let qz = num(row["l11.qz"]);
+  let ax = -2.0 * (qx * qy - w * qz);
+  let az = -2.0 * (qy * qz + w * qx);
+  let tz = num(row["l11.z"]) + 0.05 * az;
+  let sp = sqrt(vx * vx + vz * vz);
+  vmax = max(vmax, sp);
+  tip = tip + sprintf("%.4f,%.4f,%.4f,%.4f\n", t, sp, 9.81 * t, sqrt(2.0 * 9.81 * max(0.0, -tz)));
+  if (k % 10 == 0 && t <= 0.5) {
+    strobe = strobe + sprintf("0 0 %.2f\n", t);
+    for (i in range(0, 12)) { strobe = strobe + sprintf("%.5f %.5f %.2f\n", num(row["l" + str(i) + ".x"]), num(row["l" + str(i) + ".z"]), t); }
+    strobe = strobe + sprintf("%.5f %.5f %.2f\n\n", num(row["l11.x"]) + 0.05 * ax, tz, t);
+  }
+}
+write_file("build/examples/chain_strobe.dat", strobe);
+write_file("build/examples/chain_tip.csv", tip);
+println(sprintf("fastest tip speed %.2f m/s; a stone dropped 1.15 m reaches %.2f m/s", vmax, sqrt(2.0 * 9.81 * 1.15)));
+assert(vmax > 1.5 * sqrt(2.0 * 9.81 * 1.15));
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/chain_whip.png", 1100, 500);
+plot.cmd("set multiplot layout 1,2");
+plot.cmd("set title 'The chain every 50 ms (pin at the origin)'");
+plot.cmd("set xlabel 'x [m]'");
+plot.cmd("set ylabel 'z [m]'");
+plot.cmd("set size ratio -1");
+plot.cmd("set xrange [-0.4:1.3]");
+plot.cmd("set yrange [-1.3:0.15]");
+plot.cmd("set grid");
+plot.cmd("set palette defined (0 '#4fa3ff', 0.25 '#7bd88f', 0.5 '#d62728')");
+plot.cmd("set cbrange [0:0.5]");
+plot.cmd("set cblabel 'time [s]'");
+plot.cmd("plot 'build/examples/chain_strobe.dat' using 1:2:3 with linespoints lw 2 pt 7 ps 0.5 lc palette notitle");
+plot.cmd("set size noratio");
+plot.cmd("unset colorbox");
+plot.cmd("set title 'Speed of the free end'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'speed [m/s]'");
+plot.cmd("set xrange [0:0.7]");
+plot.cmd("set yrange [0:10]");
+plot.cmd("set key top left Left reverse");
+plot.cmd("set datafile separator ','");
+plot.cmd("plot 'build/examples/chain_tip.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#d62728' title 'chain tip (lmphysics)', '' skip 1 using 1:4 with lines lw 2 dt 2 lc rgb '#1f77b4' title 'a stone falling the same height: sqrt(2 g h)'");
+plot.cmd("unset multiplot");
+plot.close();
+end _dsl_
+savedsl(draw, "build/chain_whip-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/chain_whip-draw.dslb;
+assert(r.code == 0);
+println("wrote images/chain_whip.png");

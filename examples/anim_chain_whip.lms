@@ -1,0 +1,65 @@
+# The chain whip animated: twelve hinged links released horizontal, drawn every 10 ms with lmdraw, the tip's path
+# traced and its speed printed (it peaks near 8.5 m/s at the bottom of the swing). Same simulation as chain_whip.lms.
+# Needs ffmpeg on PATH to assemble the GIF.
+# Output: images/chain_whip.gif   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("build/rendered");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let s = phys.system("nsc");
+s.integrator("hht").timestep(0.0002).record_every(50);
+let pin = s.ground("pin");
+let l = 0.1;
+let prev = pin;
+for (i in range(0, 12)) {
+  let b = s.cylinder("l" + str(i), 0.01, l, 2700.0).rot_axis(0.0, 0.0, 1.0, 1.5707963267948966).pos(l * (float(i) + 0.5), 0.0, 0.0);
+  s.revolute("j" + str(i), prev, b, l * float(i), 0.0, 0.0, 0.0, 1.0, 0.0);
+  s.record("l" + str(i), "x,z,vx,vz,qw,qx,qy,qz");
+  prev = b;
+}
+s.run(0.8);
+s.save_csv("build/examples/anim_chain_whip.csv");
+end _dsl_
+savedsl(sim, "build/anim_chain_whip-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/anim_chain_whip-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+rows = csv_parse(read_file("build/examples/anim_chain_whip.csv"));
+assert(rows.len() == 81);
+# Pixels: pin at (180, 110), 330 px per metre, z up.
+trail = "";
+for (k in range(0, rows.len())) {
+  row = rows[k];
+  pts = "180.0,110.0 ";
+  for (i in range(0, 12)) {
+    pts = pts + sprintf("%.1f,%.1f ", 180.0 + 330.0 * num(row["l" + str(i) + ".x"]), 110.0 - 330.0 * num(row["l" + str(i) + ".z"]));
+  }
+  w = num(row["l11.qw"]); qx = num(row["l11.qx"]); qy = num(row["l11.qy"]); qz = num(row["l11.qz"]);
+  tx = 180.0 + 330.0 * (num(row["l11.x"]) - 0.1 * (qx * qy - w * qz));
+  tz = 110.0 - 330.0 * (num(row["l11.z"]) - 0.1 * (qy * qz + w * qx));
+  pts = pts + sprintf("%.1f,%.1f", tx, tz);
+  trail = trail + sprintf("%.1f,%.1f ", tx, tz);
+  # Whole pixels: lmscript writes an integral float into the _dsl_ block as an int literal.
+  txi = round(tx); tzi = round(tz);
+  sp = sqrt(num(row["l11.vx"]) * num(row["l11.vx"]) + num(row["l11.vz"]) * num(row["l11.vz"]));
+  label = sprintf("t = %.2f s     tip speed %.1f m/s", num(row["t"]), sp);
+  frame = "build/rendered/chain" + sprintf("%03d", k) + ".png";
+  d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+  scene.canvas(600, 540, "#0f1720");
+  scene.text(24.0, 34.0, 18.0, "Chain whip: twelve hinged links (lmphysics, HHT)", "#e6edf3");
+  scene.text(24.0, 58.0, 14.0, ${label}, "#ffd166");
+  scene.rect(150.0, 96.0, 30.0, 14.0, "#5b7690");
+  scene.polyline(${trail}, "#ff6b6b", 1.5).set_attr("opacity", "0.6");
+  scene.polyline(${pts}, "#9fc6ff", 5.0).set_attr("stroke-linejoin", "round");
+  scene.circle(180.0, 110.0, 5.0, "#e6edf3");
+  scene.circle(float(${txi}), float(${tzi}), 7.0, "#ff6b6b");
+  scene.render_png(${frame}, 600, 540, 1);
+end _dsl_
+  savedsl(d, "build/chain_frame.dslb");
+  r = system ${dsl_cli(d)} --dsl build/chain_frame.dslb;
+  assert(r.code == 0);
+}
+r = system ffmpeg -y -loglevel error -framerate 15 -i build/rendered/chain%03d.png -vf "split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse" images/chain_whip.gif;
+assert(r.code == 0);
+println("wrote images/chain_whip.gif");

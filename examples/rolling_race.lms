@@ -1,0 +1,66 @@
+# Which reaches the bottom first? A solid ball, a hollow ball, a solid cylinder, a thin hoop and a frictionless block race
+# down the same 15 degree ramp from rest. Rolling without slipping turns part of the energy into spin, so the
+# acceleration is g sin(theta) / (1 + I / (m r^2)): 5/7, 3/5, 2/3 and 1/2 of the slider's. Mass and radius do not matter.
+# lmphysics simulates the five bodies on a collision ramp with friction 0.6 (enough to roll without slipping), checks
+# each distance against the closed form, and lmplot draws distance against time.
+# Output: images/rolling_race.png   (run: lmctl autorun <raw url of this file>)
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let th = 0.2617993877991494;
+let g = 9.81;
+let w = phys.system("nsc");
+w.material("grip", 0.6, 0.0).material("ice", 0.0, 0.0).timestep(0.0005).solver("psor", 150).record_every(20);
+# Two ramps side by side, rotated about y so they slope down towards +x.
+w.box("ramp", 30.0, 2.0, 0.4, 1000.0).rot_axis(0.0, 1.0, 0.0, th).fixed(true).collide("grip");
+w.box("ice_ramp", 30.0, 0.6, 0.4, 1000.0).rot_axis(0.0, 1.0, 0.0, th).pos(0.0, -1.5, 0.0).fixed(true).collide("ice");
+# Start 10 m up the slope, centres 0.3 m above the ramp's centre plane (0.2 half thickness + 0.1 radius).
+let r = 0.1;
+let x0 = -10.0 * cos(th) + 0.3 * sin(th);
+let z0 = 10.0 * sin(th) + 0.3 * cos(th);
+# Same mass and radius, different inertia I = k m r^2. Every roller touches the ramp with a sphere: Bullet's cylinder
+# contact rolls a few percent off the closed form (see the README limits), the sphere contact is exact.
+let ball = w.sphere("ball", r, 500.0).pos(x0, -0.75, z0).collide("grip");
+let m = ball.mass();
+let shell = w.sphere("shell", r, 500.0).pos(x0, -0.25, z0).collide("grip").mass_props(m, 2.0 / 3.0 * m * r * r, 2.0 / 3.0 * m * r * r, 2.0 / 3.0 * m * r * r);
+let disc = w.sphere("disc", r, 500.0).pos(x0, 0.25, z0).collide("grip").mass_props(m, 0.5 * m * r * r, 0.5 * m * r * r, 0.5 * m * r * r);
+let hoop = w.sphere("hoop", r, 500.0).pos(x0, 0.75, z0).collide("grip").mass_props(m, m * r * r, m * r * r, m * r * r);
+let blk = w.box("block", 0.2, 0.2, 0.2, 500.0).rot_axis(0.0, 1.0, 0.0, th).pos(x0, -1.5, z0).collide("ice");
+w.record("block", "x").record("ball", "x").record("shell", "x").record("disc", "x").record("hoop", "x");
+w.run(4.0);
+# Distance along the slope after 4 s against s = a t^2 / 2 with a = g sin(theta) / (1 + k).
+let s = g * sin(th) * 8.0;
+phys.assert_close((blk.x() - x0) / cos(th), s, 0.03);
+phys.assert_close((ball.x() - x0) / cos(th), s / 1.4, 0.03);
+phys.assert_close((shell.x() - x0) / cos(th), s / (5.0 / 3.0), 0.03);
+phys.assert_close((disc.x() - x0) / cos(th), s / 1.5, 0.03);
+phys.assert_close((hoop.x() - x0) / cos(th), s / 2.0, 0.03);
+w.save_csv("build/examples/rolling_race.csv");
+end _dsl_
+savedsl(sim, "build/rolling_race-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/rolling_race-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# Distance along the slope from the start, for each body: (x - x0) / cos(theta).
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/rolling_race.png", 900, 560);
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Race down a 15 degree ramp: same mass and radius, different inertia (lines: lmphysics, circles: closed form)'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'distance down the ramp [m]'");
+plot.cmd("set grid");
+plot.cmd("set key top left box opaque");
+plot.cmd("g = 9.81; s = sin(15*pi/180); c = cos(15*pi/180)");
+plot.cmd("set xrange [0:4]");
+plot.cmd("set yrange [0:22]");
+plot.cmd("set samples 17");
+plot.cmd("x0 = -10*c + 0.3*s");
+plot.cmd("set termoption noenhanced");
+plot.cmd("plot 'build/examples/rolling_race.csv' skip 1 using 1:(($2 - x0)/c) with lines lw 3 lc rgb '#7f7f7f' title 'frictionless block: a = g sin(theta)', 'build/examples/rolling_race.csv' skip 1 using 1:(($3 - x0)/c) with lines lw 3 lc rgb '#d62728' title 'solid ball, I = 2/5 m r^2: a is 5/7 of that', 'build/examples/rolling_race.csv' skip 1 using 1:(($5 - x0)/c) with lines lw 3 lc rgb '#1f77b4' title 'solid cylinder, I = 1/2 m r^2: 2/3', 'build/examples/rolling_race.csv' skip 1 using 1:(($4 - x0)/c) with lines lw 3 lc rgb '#9467bd' title 'hollow ball, I = 2/3 m r^2: 3/5', 'build/examples/rolling_race.csv' skip 1 using 1:(($6 - x0)/c) with lines lw 3 lc rgb '#2ca02c' title 'thin hoop, I = m r^2: 1/2', 1*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' title 'closed form s = a t^2 / 2', 5./7*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' notitle, 2./3*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' notitle, 3./5*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' notitle, 1./2*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' notitle");
+plot.close();
+end _dsl_
+savedsl(draw, "build/rolling_race-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/rolling_race-draw.dslb;
+assert(r.code == 0);
+println("wrote images/rolling_race.png");

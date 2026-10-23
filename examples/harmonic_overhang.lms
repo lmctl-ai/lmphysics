@@ -1,0 +1,94 @@
+# The book-stacking puzzle: how far can a stack of blocks reach past a table edge? Shift each block so that the
+# centre of mass of everything above sits just over the edge of the block below: the top block overhangs by L/2,
+# the next by L/4, then L/6 ... and six blocks reach (L/2)(1 + 1/2 + ... + 1/6) = 1.225 L past the edge -- the top
+# block is entirely beyond the table. lmphysics builds two stacks of six 40 cm blocks: one at 96% of the harmonic
+# offsets (it stands) and one at 110% (the top block topples). Balance problems need small collision margins:
+# with Chrono's default 3 cm envelope a block with its centre 2 cm past an edge still rests (see the README limits).
+# lmblender renders both stacks while the top block of the second is falling.
+# Output: images/harmonic_overhang.png   (run: lmctl autorun <raw url of this file>)
+import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536a04b8d4448162c4a229d6/examples/bridge/pose_obj.lms";
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let L = 0.4;
+let n = 6;
+let s = phys.system("nsc");
+s.material("wood", 0.6, 0.0).timestep(0.001).solver("psor", 300).collision_margins(0.002, 0.001).record_every(10);
+for (k in range(0, 2)) {
+  let f = 0.96;
+  if (k == 1) { f = 1.10; }
+  # Two tables side by side, their edges at x = e (stack 0 on the left).
+  let e = -0.75 + 1.25 * float(k);
+  s.box("table" + str(k), 1.0, 1.0, 0.5, 1000.0).pos(e - 0.5, 0.0, -0.25).fixed(true).collide("wood");
+  # Bottom block first: it overhangs the table by f L / (2 n); the block above it by f L / (2 (n - 1)), and so on.
+  let c = e - L / 2.0 + f * L / (2.0 * float(n));
+  for (i in range(0, n)) {
+    if (i > 0) { c = c + f * L / (2.0 * float(n - i)); }
+    let name = "s" + str(k) + "b" + str(i);
+    s.box(name, L, 0.2, 0.1, 500.0).pos(c, 0.0, 0.05 + 0.1 * float(i)).collide("wood");
+    s.record(name, "x,y,z,qw,qx,qy,qz");
+  }
+  if (k == 0) { phys.assert_close(c + L / 2.0 - e, f * L / 2.0 * (1.0 + 1.0 / 2.0 + 1.0 / 3.0 + 1.0 / 4.0 + 1.0 / 5.0 + 1.0 / 6.0), 0.000001); }
+}
+s.run(2.0);
+s.save_csv("build/examples/harmonic_overhang.csv");
+end _dsl_
+savedsl(sim, "build/harmonic_overhang-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/harmonic_overhang-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+rows = csv_parse(read_file("build/examples/harmonic_overhang.csv"));
+first = rows[0];
+last = rows[rows.len() - 1];
+# The 96% stack has not moved after 2 s; the 110% stack lost its top block (the rest stands).
+for (i in range(0, 6)) {
+  assert(abs(num(last["s0b" + str(i) + ".x"]) - num(first["s0b" + str(i) + ".x"])) < 0.005);
+  assert(abs(num(last["s0b" + str(i) + ".z"]) - num(first["s0b" + str(i) + ".z"])) < 0.005);
+}
+assert(num(last["s1b5.z"]) < -1.0);
+assert(abs(num(last["s1b3.z"]) - num(first["s1b3.z"])) < 0.01);
+println(sprintf("96%% stack: top block reaches %.3f m past the edge (1.225 L = %.3f m at 100%%) and stands", num(first["s0b5.x"]) + 0.2 + 0.75, 0.49));
+# Snapshot while the second stack's top block is falling: its centre 12 cm below where it started.
+frame = rows[0];
+for (row in rows) {
+  if (num(frame["s1b5.z"]) > num(first["s1b5.z"]) - 0.12) { frame = row; }
+}
+println(sprintf("snapshot at t = %.2f s", num(frame["t"])));
+for (k in range(0, 2)) {
+  for (i in range(0, 6)) {
+    let name = "s" + str(k) + "b" + str(i);
+    pose_box_obj(frame, name, 0.4, 0.2, 0.1, "build/examples/ho_" + name + ".obj");
+  }
+}
+
+render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+let oak = scene.material(0.55, 0.36, 0.2, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0);
+let table = scene.material(0.12, 0.07, 0.04, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0);
+let red = scene.material(0.75, 0.16, 0.12, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0);
+let ink = scene.material(0.92, 0.92, 0.9, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0);
+let ta = scene.cube(1.0); ta.scale(1.0, 1.0, 0.5); ta.translate(-1.25, 0.0, -0.25); ta.set_material(table);
+let tb = scene.cube(1.0); tb.scale(1.0, 1.0, 0.5); tb.translate(0.0, 0.0, -0.25); tb.set_material(table);
+for (k in range(0, 2)) {
+  for (i in range(0, 6)) {
+    let b = scene.import_obj("build/examples/ho_s" + str(k) + "b" + str(i) + ".obj");
+    if (i == 5) { b.set_material(red); } else { b.set_material(oak); }
+  }
+}
+let t0 = scene.label("STANDS", 0.0, 0.0, 0.0, 0.07); t0.rotate_x(90.0); t0.translate(-0.85, 0.0, 0.8); t0.set_material(ink);
+let t1 = scene.label("TOPPLES", 0.0, 0.0, 0.0, 0.07); t1.rotate_x(90.0); t1.translate(0.38, 0.0, 0.8); t1.set_material(ink);
+scene.ground_plane(-0.5, 100.0, 0.35, 0.37, 0.4);
+scene.area_light(-1.5, -2.5, 3.0, -0.3, 0.0, 0.3, 1.0, 0.9, 0.78, 260.0, 2.5);
+scene.area_light(2.0, -1.5, 1.5, -0.3, 0.0, 0.3, 0.6, 0.75, 1.0, 90.0, 2.0);
+scene.world_color(0.6, 0.7, 0.85, 0.3);
+scene.camera_look_at(0.0, -3.7, 0.95, -0.12, 0.0, 0.3, 30.0);
+scene.set_view_transform("AgX");
+scene.render_settings(6, 17, true);
+scene.render_png("images/harmonic_overhang.png", 48, 900, 600);
+end _dsl_
+savedsl(render, "build/harmonic_overhang-render.dslb");
+argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/harmonic_overhang-render.dslb");
+r = system(argv, 300000);
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/harmonic_overhang.png");

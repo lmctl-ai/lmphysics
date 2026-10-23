@@ -1,0 +1,121 @@
+# The tennis-racket theorem (the Dzhanibekov effect seen on the ISS with a wing nut): a free body spins steadily
+# about its axes of largest and smallest inertia, but a spin about the intermediate axis flips over and over.
+# lmphysics spins a 30 x 20 x 5 cm plate in zero gravity at 10 rad/s about each axis, nudged by 0.01 rad/s, and
+# follows the spin axis against the (conserved) angular momentum. Only the intermediate axis turns over --
+# 2.8 s -- while energy and angular momentum stay constant. lmplot draws the alignment; lmblender a filmstrip of
+# one flip (the white rod on the spin axis turns from left to right).
+# Output: images/tennis_racket.png, images/tennis_racket_render.png   (run: lmctl autorun <raw url of this file>)
+import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536a04b8d4448162c4a229d6/examples/bridge/pose_obj.lms";
+mkdir("build/examples");
+mkdir("images");
+sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+for (k in range(0, 3)) {
+  let s = phys.system("nsc");
+  s.gravity(0.0, 0.0, 0.0).integrator("hht").timestep(0.0005).record_every(10);
+  # Inertia about x (0.30 m side across) is smallest, about z largest, about y in between.
+  let b = s.box("plate", 0.3, 0.2, 0.05, 500.0);
+  if (k == 0) { b.omega(10.0, 0.01, 0.01); }
+  if (k == 1) { b.omega(0.01, 10.0, 0.01); }
+  if (k == 2) { b.omega(0.01, 0.01, 10.0); }
+  s.record("plate", "x,y,z,qw,qx,qy,qz");
+  let ke0 = b.ke();
+  let l0 = sqrt(b.lx() * b.lx() + b.ly() * b.ly() + b.lz() * b.lz());
+  s.run(10.0);
+  phys.assert_close(b.ke() / ke0, 1.0, 0.00001);
+  phys.assert_close(sqrt(b.lx() * b.lx() + b.ly() * b.ly() + b.lz() * b.lz()) / l0, 1.0, 0.00001);
+  s.save_csv("build/examples/racket_" + str(k) + ".csv");
+}
+end _dsl_
+savedsl(sim, "build/tennis_racket-sim.dslb");
+r = system ${dsl_cli(sim)} --dsl build/tennis_racket-sim.dslb;
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+
+# Alignment of each spin axis with its starting direction (= the angular momentum): from the quaternion,
+# x.x' = 1 - 2(qy^2 + qz^2), y.y' = 1 - 2(qx^2 + qz^2), z.z' = 1 - 2(qx^2 + qy^2).
+out = "t,ax,ay,az\n";
+r0 = csv_parse(read_file("build/examples/racket_0.csv"));
+r1 = csv_parse(read_file("build/examples/racket_1.csv"));
+r2 = csv_parse(read_file("build/examples/racket_2.csv"));
+flips = 0;
+prev = 1.0;
+for (j in range(0, r1.len())) {
+  let a = r0[j]; let b = r1[j]; let c = r2[j];
+  let ax = 1.0 - 2.0 * (num(a["plate.qy"]) * num(a["plate.qy"]) + num(a["plate.qz"]) * num(a["plate.qz"]));
+  let ay = 1.0 - 2.0 * (num(b["plate.qx"]) * num(b["plate.qx"]) + num(b["plate.qz"]) * num(b["plate.qz"]));
+  let az = 1.0 - 2.0 * (num(c["plate.qx"]) * num(c["plate.qx"]) + num(c["plate.qy"]) * num(c["plate.qy"]));
+  assert(ax > 0.99 && az > 0.99, "spin about the smallest or largest axis must stay put");
+  if (ay * prev < 0.0) { flips = flips + 1; }
+  prev = ay;
+  out = out + sprintf("%s,%.5f,%.5f,%.5f\n", b["t"], ax, ay, az);
+}
+write_file("build/examples/tennis_racket.csv", out);
+println(sprintf("intermediate axis: %d half-turns in 10 s; the other two axes stay within 8 degrees", flips));
+assert(flips >= 3 && flips <= 5);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/tennis_racket.png", 900, 500);
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Free plate spun at 10 rad/s about each axis (zero gravity, lmphysics)'");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'spin axis . angular momentum direction'");
+plot.cmd("set yrange [-1.25:1.6]");
+plot.cmd("set grid");
+plot.cmd("set key top center horizontal box opaque");
+plot.cmd("plot 'build/examples/tennis_racket.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#1f77b4' title 'smallest inertia: stable', '' skip 1 using 1:4 with lines lw 3 dt 2 lc rgb '#2ca02c' title 'largest inertia: stable', '' skip 1 using 1:3 with lines lw 3 lc rgb '#d62728' title 'intermediate: flips'");
+plot.close();
+end _dsl_
+savedsl(draw, "build/tennis_racket-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/tennis_racket-draw.dslb;
+assert(r.code == 0);
+println("wrote images/tennis_racket.png");
+
+# Filmstrip: eight moments from t = 0.9 s to 2.1 s (one flip). Each plate is split into its +y (red) and -y (blue)
+# halves, and a white rod marks its +y axis -- the axis it was spun about.
+fn body_box(row, x0, x1, y0, y1, z0, z1, path) {
+  let out = "";
+  for (cx in [x0, x1]) {
+    for (cy in [y0, y1]) {
+      for (cz in [z0, z1]) {
+        let p = pose_point(row, "plate", [cx, cy, cz]);
+        out = out + sprintf("v %.6f %.6f %.6f\n", p[0], p[1], p[2]);
+      }
+    }
+  }
+  # Vertex index = 4 ix + 2 iy + iz + 1; two triangles per face.
+  out = out + "f 1 2 4\nf 1 4 3\nf 5 7 8\nf 5 8 6\nf 1 5 6\nf 1 6 2\nf 3 4 8\nf 3 8 7\nf 1 3 7\nf 1 7 5\nf 2 6 8\nf 2 8 4\n";
+  write_file(path, out);
+}
+for (j in range(0, 8)) {
+  let row = r1[180 + 34 * j];
+  body_box(row, -0.15, 0.15, 0.0, 0.1, -0.025, 0.025, "build/examples/racket_p" + str(j) + ".obj");
+  body_box(row, -0.15, 0.15, -0.1, 0.0, -0.025, 0.025, "build/examples/racket_m" + str(j) + ".obj");
+  body_box(row, -0.008, 0.008, 0.1, 0.3, -0.008, 0.008, "build/examples/racket_a" + str(j) + ".obj");
+}
+
+render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+let red = scene.material(0.75, 0.08, 0.05, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0);
+let blue = scene.material(0.05, 0.2, 0.65, 0.0, 0.4, 0.0, 0.0, 0.0, 0.0, 0.0);
+let ink = scene.material(0.92, 0.92, 0.9, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0);
+for (j in range(0, 8)) {
+  # The camera looks along +x, so time runs along -y (left to right on the screen).
+  let a = scene.import_obj("build/examples/racket_p" + str(j) + ".obj"); a.set_material(red); a.translate(0.0, 1.75 - 0.5 * float(j), 0.0);
+  let b = scene.import_obj("build/examples/racket_m" + str(j) + ".obj"); b.set_material(blue); b.translate(0.0, 1.75 - 0.5 * float(j), 0.0);
+  let c = scene.import_obj("build/examples/racket_a" + str(j) + ".obj"); c.set_material(ink); c.translate(0.0, 1.75 - 0.5 * float(j), 0.0);
+}
+let t0 = scene.label("SPIN ABOUT THE MIDDLE AXIS TURNS OVER", 0.0, 0.0, 0.0, 0.08); t0.rotate_x(90.0); t0.rotate_z(-90.0); t0.translate(0.0, 1.85, 0.5); t0.set_material(ink);
+scene.ground_plane(-0.35, 100.0, 0.16, 0.18, 0.21);
+scene.area_light(-3.0, 1.0, 3.0, 0.0, 0.0, 0.0, 1.0, 0.92, 0.82, 600.0, 3.0);
+scene.area_light(-1.0, -2.0, 1.0, 0.0, 0.0, 0.0, 0.6, 0.75, 1.0, 150.0, 2.0);
+scene.world_color(0.6, 0.65, 0.75, 0.35);
+scene.camera_look_at(-4.4, 0.0, 0.9, 0.0, 0.0, 0.1, 25.0);
+scene.set_view_transform("AgX");
+scene.render_settings(6, 17, true);
+scene.render_png("images/tennis_racket_render.png", 48, 1000, 400);
+end _dsl_
+savedsl(render, "build/tennis_racket-render.dslb");
+argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/tennis_racket-render.dslb");
+r = system(argv, 300000);
+if (r.code != 0) { println(r.stdout); println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/tennis_racket_render.png");
