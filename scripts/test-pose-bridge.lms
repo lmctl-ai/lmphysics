@@ -21,4 +21,30 @@ mkdir("build/examples");
 pose_box_obj(row,"b",2.0,4.0,6.0,"build/examples/pose_bridge_test.obj");
 lines=split(trim(read_file("build/examples/pose_bridge_test.obj")),"\n");
 assert(lines.len()==21);
-println("pose bridge: translation, quaternion order/handedness, normalization and OBJ topology pass");
+# Cylinder along local y, rotated 90 degrees about y (unchanged axis): caps at y = 2 -/+ 3, radius 1 about (1, *, 3).
+row2 = {"c.x":1.0,"c.y":2.0,"c.z":3.0,"c.qw":sqrt(0.5),"c.qx":0.0,"c.qy":sqrt(0.5),"c.qz":0.0};
+pose_cylinder_obj(row2,"c",1.0,6.0,8,"build/examples/pose_cyl_test.obj");
+cl=split(trim(read_file("build/examples/pose_cyl_test.obj")),"\n");
+assert(cl.len()==1+18+32);
+for (ln in cl) {
+  if (ln[0]=="v") {
+    let f=split(ln," ");
+    let dx=num(f[1])-1.0; let dz=num(f[3])-3.0; let y=num(f[2]);
+    assert(abs(y-2.0)<0.000001 || abs(abs(y-2.0)-3.0)<0.000001);
+    assert(abs(dx*dx+dz*dz-1.0)<0.000001 || abs(dx*dx+dz*dz)<0.000001);
+  }
+}
+# Sphere: every vertex at distance r from the centre; hemispheres split the faces in half.
+pose_sphere_obj(row2,"c",0.5,12,0,"build/examples/pose_sph_test.obj");
+sl=split(trim(read_file("build/examples/pose_sph_test.obj")),"\n");
+assert(sl.len()==1+7*12+6*12*2);
+for (ln in sl) {
+  if (ln[0]=="v") {
+    let f=split(ln," ");
+    let dx=num(f[1])-1.0; let dy=num(f[2])-2.0; let dz=num(f[3])-3.0;
+    assert(abs(sqrt(dx*dx+dy*dy+dz*dz)-0.5)<0.000001);
+  }
+}
+pose_sphere_obj(row2,"c",0.5,12,1,"build/examples/pose_sph_half.obj");
+assert(split(trim(read_file("build/examples/pose_sph_half.obj")),"\n").len()==1+7*12+3*12*2);
+println("pose bridge: translation, quaternion order/handedness, normalization, box/cylinder/sphere OBJ topology pass");

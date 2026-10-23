@@ -35,3 +35,66 @@ fn pose_box_obj(row, name, sx, sy, sz, path) {
   out = out + "f 1 4 3\nf 1 3 2\nf 5 6 7\nf 5 7 8\nf 1 2 6\nf 1 6 5\nf 2 3 7\nf 2 7 6\nf 3 4 8\nf 3 8 7\nf 4 1 5\nf 4 5 8\n";
   write_file(path, out);
 }
+# lmscript has no sin/cos outside _dsl_ blocks: Taylor series after reduction to [-pi, pi] (error < 1e-15).
+fn pose_sincos(a) {
+  let pi2 = 6.283185307179586;
+  a = a - pi2 * floor(a / pi2 + 0.5);
+  let s = 0.0; let c = 0.0; let ts = a; let tc = 1.0;
+  for (k in range(0, 14)) {
+    s = s + ts; c = c + tc;
+    ts = -ts * a * a / ((2.0*k + 2.0) * (2.0*k + 3.0));
+    tc = -tc * a * a / ((2.0*k + 1.0) * (2.0*k + 2.0));
+  }
+  return [s, c];
+}
+# Closed cylinder of radius r and length h along the body's local y axis (lmphysics' cylinder axis),
+# n segments around; caps included. Faces wind outward.
+fn pose_cylinder_obj(row, name, r, h, n, path) {
+  assert(r > 0.0 && r <= 10000.0 && h > 0.0 && h <= 10000.0, "invalid cylinder dimensions");
+  assert(n >= 3 && n <= 256, "cylinder segments must be in 3..256");
+  let out = "# World-space cylinder from lmphysics CSV; metres, Z-up\n";
+  for (k in range(0, n)) {
+    let sc = pose_sincos(6.283185307179586 * k / n);
+    let p = pose_point(row, name, [r*sc[1], -h/2.0, r*sc[0]]);
+    let q = pose_point(row, name, [r*sc[1], h/2.0, r*sc[0]]);
+    out = out + sprintf("v %.12f %.12f %.12f\nv %.12f %.12f %.12f\n", p[0],p[1],p[2], q[0],q[1],q[2]);
+  }
+  let c0 = pose_point(row, name, [0.0, -h/2.0, 0.0]);
+  let c1 = pose_point(row, name, [0.0, h/2.0, 0.0]);
+  out = out + sprintf("v %.12f %.12f %.12f\nv %.12f %.12f %.12f\n", c0[0],c0[1],c0[2], c1[0],c1[1],c1[2]);
+  for (k in range(0, n)) {
+    let a0 = 2*k + 1; let b0 = 2*k + 2;
+    let a1 = 2*((k+1)%n) + 1; let b1 = 2*((k+1)%n) + 2;
+    out = out + sprintf("f %d %d %d\nf %d %d %d\nf %d %d %d\nf %d %d %d\n", a0, b0, b1, a0, b1, a1, 2*n+1, a0, a1, 2*n+2, b1, b0);
+  }
+  write_file(path, out);
+}
+# UV sphere of radius r (n segments around, n/2 rings). The sphere is baked with the body's orientation; pass
+# half = 1 or -1 to write only the local +x or -x hemisphere (two colours make the spin visible), 0 for all.
+fn pose_sphere_obj(row, name, r, n, half, path) {
+  assert(r > 0.0 && r <= 10000.0, "invalid sphere radius");
+  assert(n >= 6 && n <= 256 && n % 2 == 0, "sphere segments must be even and in 6..256");
+  assert(half == 0 || half == 1 || half == -1, "half must be -1, 0 or 1");
+  let m = n / 2;
+  let out = "# World-space sphere from lmphysics CSV; metres, Z-up\n";
+  # Longitude a runs around the local x axis so a hemisphere split at x = 0 falls on ring boundaries.
+  for (i in range(0, m + 1)) {
+    let st = pose_sincos(3.141592653589793 * i / m);
+    for (k in range(0, n)) {
+      let sa = pose_sincos(6.283185307179586 * k / n);
+      let p = pose_point(row, name, [r*st[1], r*st[0]*sa[1], r*st[0]*sa[0]]);
+      out = out + sprintf("v %.12f %.12f %.12f\n", p[0], p[1], p[2]);
+    }
+  }
+  for (i in range(0, m)) {
+    let keep = half == 0 || (half == 1 && i < m/2) || (half == -1 && i >= m/2);
+    if (keep) {
+      for (k in range(0, n)) {
+        let v00 = i*n + k + 1; let v01 = i*n + (k+1)%n + 1;
+        let v10 = (i+1)*n + k + 1; let v11 = (i+1)*n + (k+1)%n + 1;
+        out = out + sprintf("f %d %d %d\nf %d %d %d\n", v00, v10, v11, v00, v11, v01);
+      }
+    }
+  }
+  write_file(path, out);
+}

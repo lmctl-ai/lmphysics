@@ -3,6 +3,7 @@
 **Rigid-body physics (Project Chrono) in one static executable, driven from lmscript.**
 
 [![CI](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmphysics?label=release)](https://github.com/lmctl-ai/lmphysics/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ### Physics rendered with Cycles

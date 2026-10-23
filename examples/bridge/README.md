@@ -6,6 +6,15 @@
 pose_box_obj(row, "body_name", size_x, size_y, size_z, "body.obj");
 ```
 
+Spheres and cylinders have their own writers:
+
+```text
+pose_sphere_obj(row, "ball", radius, segments, half, "ball.obj");      # half: 0 whole, 1 or -1 one hemisphere
+pose_cylinder_obj(row, "link", radius, length, segments, "link.obj");  # axis = body-local y, like lmphysics
+```
+
+Writing the two hemispheres of a ball to two files with two materials makes its spin visible in a still.
+
 Import that file with lmblender `scene.import_obj("body.obj")` and assign a material. Dimensions are the full box lengths supplied to lmphysics. `pose_point(row,name,[x,y,z])` transforms any body-local point, for joints or other custom meshes. Coordinates stay in metres in the right-handed Z-up frame shared by Chrono and Cycles. Quaternions are Hamilton, scalar first, and map body-local to world coordinates. The helper normalizes them and refuses missing/nonfinite/oversized values and zero quaternions.
 
 The OBJ contains eight world-space vertices and twelve outward-facing triangles, without external materials. It represents a single snapshot; it does not interpolate motion, infer shape sizes from CSV, or recreate constraints. Put dimensions and material choices in the rendering script. Repeating it for selected rows produces a sequence of snapshots. No shell tools, Python, native reader additions or new releases are needed.
