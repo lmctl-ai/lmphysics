@@ -3,6 +3,8 @@
 # --verify only checks that each checkout is at its pin. Extra words after the commit are sparse-checkout paths
 # (a partial clone then downloads only those blobs: Chrono ships ~1 GB of sample data we never read).
 set -eu
+# git-bash on Windows would rewrite the leading "/" of sparse-checkout patterns into a Windows path
+export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 while read -r name repo commit paths; do
   case "$name" in ''|\#*) continue;; esac
