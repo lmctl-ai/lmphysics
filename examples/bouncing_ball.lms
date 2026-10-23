@@ -2,6 +2,7 @@
 # a factor between e^4 = 0.41 and e^2 = 0.64 of the previous one, depending on the impact phase within the step.
 out = ARGV.len() > 0 ? ARGV[0] : "build/bouncing_ball.dslb";
 mkdir("build/examples");
+mkdir("images");
 p = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.material("rubber", 0.3, 0.8).timestep(0.001);
@@ -26,3 +27,21 @@ phys.assert_close(float(n), 3.0, 0.0);
 s.save_csv("build/examples/bouncing_ball.csv");
 end _dsl_
 savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/bouncing_ball.png", 900, 520);
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Ball dropped from 2 m, restitution 0.8 (Chrono NSC contact)'");
+plot.cmd("set grid");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'height of the ball centre [m]'");
+plot.cmd("unset key");
+plot.cmd("plot 'build/examples/bouncing_ball.csv' skip 1 using 1:2 with lines lw 2 lc rgb '#1f77b4'");
+plot.close();
+end _dsl_
+savedsl(draw, "build/bouncing_ball-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/bouncing_ball-draw.dslb;
+assert(r.code == 0);
+println("wrote images/bouncing_ball.png");

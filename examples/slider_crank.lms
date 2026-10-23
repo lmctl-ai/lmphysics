@@ -2,6 +2,7 @@
 # Closed form for the slider: x = r cos(th) + sqrt(l^2 - r^2 sin^2(th)), crank r = 0.1, rod l = 0.3.
 out = ARGV.len() > 0 ? ARGV[0] : "build/slider_crank.dslb";
 mkdir("build/examples");
+mkdir("images");
 p = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.gravity(0.0, 0.0, 0.0).timestep(0.0005).integrator("trapezoidal");
@@ -21,3 +22,21 @@ phys.assert_close(slider.x(), 0.1 * cos(th) + sqrt(0.09 - 0.01 * sin(th) * sin(t
 s.save_csv("build/examples/slider_crank.csv");
 end _dsl_
 savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/slider_crank.png", 900, 520);
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Slider-crank: simulated slider position vs closed form'");
+plot.cmd("set grid");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'slider x [m]'");
+plot.cmd("set key top right box opaque");
+plot.cmd("plot 'build/examples/slider_crank.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#1f77b4' title 'simulation', 0.1*cos(10*x)+sqrt(0.09-0.01*sin(10*x)**2) with lines dt 2 lw 2 lc rgb 'black' title 'closed form'");
+plot.close();
+end _dsl_
+savedsl(draw, "build/slider_crank-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/slider_crank-draw.dslb;
+assert(r.code == 0);
+println("wrote images/slider_crank.png");

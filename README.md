@@ -1,12 +1,29 @@
 # lmphysics
 
-**Rigid-body dynamics for lmscript in one static executable: Project Chrono's core (bodies, joints,
-motors, springs, NSC and SMC contact) with fixed-step integrators and CSV recording.** It is a
-scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html)
-`_dsl_` block, compile it, run it with `lmphysics --dsl`. No Python, no data files, no shared libraries.
+**Rigid-body physics (Project Chrono) in one static executable, driven from lmscript.**
 
 [![CI](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+| ![pendulum_phase](docs/images/pendulum_phase.png) | ![energy_drift](docs/images/energy_drift.png) |
+| --- | --- |
+| Phase portrait of a pendulum on a joint: ellipses for small swings, the separatrix for large ones.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_pendulum_phase.lms` | Energy error of one pendulum under three Chrono integrators: HHT conserves it, trapezoidal bleeds it.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_energy_drift.lms` |
+
+| ![damping](docs/images/damping.png) | ![restitution](docs/images/restitution.png) |
+| --- | --- |
+| Mass-spring-damper, four damping ratios, simulation on top of the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_damping.lms` | A ball dropped for four coefficients of restitution.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_restitution.lms` |
+
+| ![slider_crank](docs/images/slider_crank.png) | ![incline](docs/images/incline.png) |
+| --- | --- |
+| Slider-crank mechanism driven by a motor: slider position vs closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/slider_crank.lms` | Friction on a 30 degree ramp: sliding at g(sin - mu cos), sticking when tan < mu.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/incline.lms` |
+
+| ![pendulum](docs/images/pendulum.png) | ![bounce](docs/images/bounce.png) |
+| --- | --- |
+| Revolute pendulum: joint angle and the reaction force at the pin.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/pendulum.lms` | A bouncing ball, simulated by lmphysics and drawn by lmplot in one script.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/combo/bounce_plot.lms` |
+
+Every picture is made by the script named under it: the script runs the simulation with lmphysics, draws with [lmplot](https://github.com/lmctl-ai/lmplot) and writes `images/` into the current directory. `examples/render-all.sh` regenerates `docs/images/`.
+
+It is a scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html) `_dsl_` block and run it. No Python, no data files, no shared libraries.
 
 ```
 # pendulum.lms
@@ -75,18 +92,6 @@ Measured accuracies are listed in [durable-memory/05-build-run-test.md](durable-
 Combine it with other hosts in one script: [examples/combo/bounce_plot.lms](examples/combo/bounce_plot.lms)
 simulates a bouncing ball with lmphysics and draws the trajectory with
 [lmplot](https://github.com/lmctl-ai/lmplot) (two `_dsl_` blocks, two hosts).
-
-![Bouncing ball](examples/renders/bounce.png)
-
-## Examples
-
-| Program | Shows |
-| --- | --- |
-| [pendulum.lms](examples/pendulum.lms) | revolute joint, HHT, energy conservation, pin reaction force |
-| [bouncing_ball.lms](examples/bouncing_ball.lms) | NSC restitution: apex heights fall by a factor between e^4 and e^2 |
-| [incline.lms](examples/incline.lms) | friction: slide with g(sin - mu cos) or stick, NSC and SMC |
-| [slider_crank.lms](examples/slider_crank.lms) | motor, three joints and a guide, closed-form slider position |
-| [combo/bounce_plot.lms](examples/combo/bounce_plot.lms) | lmphysics simulates, lmplot draws |
 
 ## Build
 

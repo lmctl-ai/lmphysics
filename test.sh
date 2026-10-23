@@ -57,31 +57,60 @@ case "$UNAME_S" in
   *) ok "static-link check skipped on $UNAME_S";;
 esac
 
-# Programs: compile every test and example, run them (they assert their own numbers).
-mkdir -p build/examples
+# Programs under tests/: compile to bytecode and run (they assert their own numbers).
+mkdir -p build
 n=0
-for src in tests/*.lms examples/*.lms; do
+for src in tests/*.lms; do
   name="$(basename "$src" .lms)"
   "$LMSCRIPT" "$src" "build/$name.dslb" >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name compile"; }
-  n=$((n+1))
-done
-ok "$n programs compile as bytecode v5"
-for src in tests/*.lms examples/*.lms; do
-  name="$(basename "$src" .lms)"
   "$HOST" --dsl "build/$name.dslb" >"$WORK/$name.out" 2>"$WORK/$name.err" || { cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run"; }
   grep -q '"ok": true' "$WORK/$name.out" || { cat "$WORK/$name.out" >&2; fail "$name did not report ok"; }
+  n=$((n+1))
 done
-ok "$n programs run and pass their own assertions"
+ok "$n test programs compile as bytecode v5, run and pass their own assertions"
 
-# Determinism: the CSV files the examples write are identical on rerun.
-for f in build/examples/*.csv; do echo "$(sha "$f") $f"; done >"$WORK/before.txt"
-for src in examples/*.lms; do
-  name="$(basename "$src" .lms)"
-  "$HOST" --dsl "build/$name.dslb" >/dev/null 2>&1 || fail "$name rerun"
+# Gallery: every image the README references exists and is a valid PNG/GIF; every linked example exists.
+img_ok() { # file
+  head -c 8 "$1" | od -An -tx1 | tr -d ' \n' | grep -q '^89504e470d0a1a0a' && return 0
+  head -c 6 "$1" | grep -q '^GIF8' && return 0
+  return 1
+}
+gal=0
+for img in $(grep -oE 'docs/images/[A-Za-z0-9_.-]+\.(png|gif)' README.md | sort -u); do
+  [ -s "$img" ] || fail "README references missing image $img"
+  img_ok "$img" || fail "$img is not a valid PNG/GIF"
+  [ "$(wc -c <"$img")" -le 3145728 ] || fail "$img is larger than 3 MB"
+  gal=$((gal+1))
 done
-for f in build/examples/*.csv; do echo "$(sha "$f") $f"; done >"$WORK/after.txt"
-cmp -s "$WORK/before.txt" "$WORK/after.txt" || fail "result files differ on rerun"
-ok "all $(wc -l <"$WORK/after.txt" | tr -d ' ') result files are byte-identical on rerun"
+for ex in $(grep -o 'examples/[A-Za-z0-9_/.-]*\.lms' README.md | sort -u); do
+  [ -f "$ex" ] || fail "README links missing example $ex"
+done
+ok "README gallery: $gal images exist and are valid, linked examples exist"
+
+# Examples are self-contained: each runs its own simulation, draws with lmplot and writes images/ and
+# build/ under the current directory. They need lmplot (on PATH or installable), so skip loudly without it.
+if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; then
+  EXDIR="$WORK/exrun"; mkdir -p "$EXDIR"
+  n=0
+  for src in examples/*.lms examples/combo/*.lms; do
+    name="$(basename "$src" .lms)"
+    (cd "$EXDIR" && "$LMSCRIPT" "$ROOT/$src") >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name example"; }
+    n=$((n+1))
+  done
+  imgs=0
+  for f in "$EXDIR"/images/*.png; do [ -s "$f" ] && img_ok "$f" || fail "example image $f missing or not a PNG"; imgs=$((imgs+1)); done
+  ok "$n examples ran by themselves (simulate, draw) and wrote $imgs valid PNGs"
+  for f in "$EXDIR"/build/examples/*.csv; do echo "$(sha "$f") $(basename "$f")"; done >"$WORK/before.txt"
+  for src in examples/*.lms examples/combo/*.lms; do
+    (cd "$EXDIR" && "$LMSCRIPT" "$ROOT/$src") >/dev/null 2>&1 || fail "$src rerun"
+  done
+  for f in "$EXDIR"/build/examples/*.csv; do echo "$(sha "$f") $(basename "$f")"; done >"$WORK/after.txt"
+  cmp -s "$WORK/before.txt" "$WORK/after.txt" || fail "result files differ on rerun"
+  ok "all $(wc -l <"$WORK/after.txt" | tr -d ' ') result files are byte-identical on rerun"
+else
+  echo "SKIPPED: examples (no lmplot on PATH and LMPHYSICS_TEST_NETWORK unset): images were not regenerated"
+  ok "examples skipped loudly (no lmplot, LMPHYSICS_TEST_NETWORK unset)"
+fi
 
 # Error paths: each snippet must fail the run with exit 3 and a message naming the problem.
 expect_error() { # name, snippet, expected message fragment
@@ -116,16 +145,6 @@ expect_error badtimestep 'let s = phys.system("nsc"); s.timestep(0.0);' "must be
 expect_error badcsv 'let s = phys.system("nsc"); s.save_csv("/nonexistent-dir/x.csv");' "cannot write"
 expect_error assertfail 'phys.assert_close(1.0, 2.0, 0.1);' "assert_close failed"
 ok "errors stop the program with exit 3 and a clear message (19 cases)"
-
-# Combined pipeline (lmphysics simulates, lmplot draws). Needs lmplot on PATH, or network for install=.
-if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; then
-  rm -f build/examples/bounce.png
-  "$LMSCRIPT" examples/combo/bounce_plot.lms >"$WORK/combo.log" 2>&1 || { cat "$WORK/combo.log" >&2; fail "combo example"; }
-  [ -s build/examples/bounce.png ] || fail "combo example wrote no PNG"
-  ok "lmphysics + lmplot pipeline draws the bouncing ball"
-else
-  ok "combo example skipped (no lmplot, LMPHYSICS_TEST_NETWORK unset)"
-fi
 
 set +e; "$HOST" --dsl "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"

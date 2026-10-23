@@ -2,6 +2,7 @@
 # a = g (sin - mu cos), the second sticks. The same experiment runs with the penalty (SMC) formulation.
 out = ARGV.len() > 0 ? ARGV[0] : "build/incline.dslb";
 mkdir("build/examples");
+mkdir("images");
 p = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let th = 0.5235987755982988;
 let slide = phys.system("nsc");
@@ -22,3 +23,22 @@ phys.assert_close(b.speed(), 0.0, 0.05);
 stick.save_csv("build/examples/incline_sticks.csv");
 end _dsl_
 savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+
+draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+plot.png("images/incline.png", 900, 520);
+plot.cmd("set datafile separator ','");
+plot.cmd("set title 'Block on a 30 degree ramp: speed along the slope for friction 0.3 (slides) and 0.7 (sticks)'");
+plot.cmd("set grid");
+plot.cmd("set xlabel 'time [s]'");
+plot.cmd("set ylabel 'speed along the slope [m/s]'");
+plot.cmd("set key top left box opaque");
+plot.cmd("th = 0.5235987755982988");
+plot.cmd("plot 'build/examples/incline_slides.csv' skip 1 using 1:($4*cos(th)-$5*sin(th)) with lines lw 3 lc rgb '#1f77b4' title 'mu = 0.3, NSC', 9.81*(sin(th)-0.3*cos(th))*x with lines dt 2 lw 2 lc rgb 'black' title 'g (sin - mu cos) t', 'build/examples/incline_sticks.csv' skip 1 using 1:4 with lines lw 3 lc rgb '#d62728' title 'mu = 0.7, SMC (sticks)'");
+plot.close();
+end _dsl_
+savedsl(draw, "build/incline-draw.dslb");
+r = system ${dsl_cli(draw)} --dsl build/incline-draw.dslb;
+assert(r.code == 0);
+println("wrote images/incline.png");

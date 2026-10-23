@@ -1,6 +1,7 @@
 # Two hosts in one script: lmphysics simulates a bouncing ball and writes a CSV, lmplot draws it.
-# Needs lmplot on PATH or installable; the PNG lands in build/examples/bounce.png.
+# Needs lmplot on PATH or installable; the PNG lands in images/bounce.png.
 mkdir("build/examples");
+mkdir("images");
 sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.material("rubber", 0.3, 0.8).timestep(0.001);
@@ -15,7 +16,7 @@ r = system ${dsl_cli(sim)} --dsl build/bounce-sim.dslb;
 assert(r.code == 0);
 
 draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
-plot.png("build/examples/bounce.png", 900, 500);
+plot.png("images/bounce.png", 900, 500);
 plot.cmd("set title 'Bouncing ball, restitution 0.8 (lmphysics / Chrono, drawn by lmplot)'");
 plot.cmd("set datafile separator ','");
 plot.cmd("set key autotitle columnhead");
@@ -28,4 +29,4 @@ end _dsl_
 savedsl(draw, "build/bounce-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/bounce-draw.dslb;
 assert(r.code == 0);
-println("wrote build/examples/bounce.png");
+println("wrote images/bounce.png");
