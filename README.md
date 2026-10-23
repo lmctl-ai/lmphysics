@@ -5,23 +5,49 @@
 [![CI](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-| ![pendulum_phase](docs/images/pendulum_phase.png) | ![energy_drift](docs/images/energy_drift.png) |
+### Mechanisms and joints
+
+| ![viz_double_pendulum](docs/images/double_pendulum.png) | ![anim_double_pendulum](docs/images/double_pendulum.gif) |
+| --- | --- |
+| Chaos: two double pendulums one micro-radian apart separate exponentially.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_double_pendulum.lms` | The same double pendulum, animated (needs ffmpeg).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/anim_double_pendulum.lms` |
+
+| ![viz_pendulum_phase](docs/images/pendulum_phase.png) | ![viz_energy_drift](docs/images/energy_drift.png) |
 | --- | --- |
 | Phase portrait of a pendulum on a joint: ellipses for small swings, the separatrix for large ones.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_pendulum_phase.lms` | Energy error of one pendulum under three Chrono integrators: HHT conserves it, trapezoidal bleeds it.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_energy_drift.lms` |
 
-| ![damping](docs/images/damping.png) | ![restitution](docs/images/restitution.png) |
+| ![pendulum](docs/images/pendulum.png) | ![slider_crank](docs/images/slider_crank.png) |
 | --- | --- |
-| Mass-spring-damper, four damping ratios, simulation on top of the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_damping.lms` | A ball dropped for four coefficients of restitution.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_restitution.lms` |
+| Revolute pendulum: joint angle and the reaction force at the pin.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/pendulum.lms` | Slider-crank driven by a motor: slider position against the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/slider_crank.lms` |
 
-| ![slider_crank](docs/images/slider_crank.png) | ![incline](docs/images/incline.png) |
+| ![viz_crank_snapshots](docs/images/crank_snapshots.png) | |
 | --- | --- |
-| Slider-crank mechanism driven by a motor: slider position vs closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/slider_crank.lms` | Friction on a 30 degree ramp: sliding at g(sin - mu cos), sticking when tan < mu.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/incline.lms` |
+| The slider-crank drawn at four crank angles from the simulated positions.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_crank_snapshots.lms` | |
 
-| ![pendulum](docs/images/pendulum.png) | ![bounce](docs/images/bounce.png) |
+### Contact and friction
+
+| ![viz_restitution](docs/images/restitution.png) | ![bounce_plot](docs/images/bounce.png) |
 | --- | --- |
-| Revolute pendulum: joint angle and the reaction force at the pin.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/pendulum.lms` | A bouncing ball, simulated by lmphysics and drawn by lmplot in one script.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/combo/bounce_plot.lms` |
+| A ball dropped for four coefficients of restitution: each apex is e squared times the last.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_restitution.lms` | A ball bouncing along the floor: lmphysics simulates, lmplot draws, one script.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/combo/bounce_plot.lms` |
 
-Every picture is made by the script named under it: the script runs the simulation with lmphysics, draws with [lmplot](https://github.com/lmctl-ai/lmplot) and writes `images/` into the current directory. `examples/render-all.sh` regenerates `docs/images/`.
+| ![incline](docs/images/incline.png) | ![viz_incline_forces](docs/images/incline_forces.png) |
+| --- | --- |
+| A block on a 30 degree ramp: sliding at g (sin - mu cos), or sticking (NSC and SMC).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/incline.lms` | Free-body diagram of the sliding block with the forces measured in the simulation (lmdraw).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_incline_forces.lms` |
+
+| ![viz_friction_stop](docs/images/friction_stop.png) | ![viz_pour](docs/images/pour.png) |
+| --- | --- |
+| Sliding distance against friction coefficient, 40 simulations on the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_friction_stop.lms` | Forty balls poured into a box and settled, rendered with lmcad.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_pour.lms` |
+
+### Oscillations and projectiles
+
+| ![viz_damping](docs/images/damping.png) | ![viz_resonance](docs/images/resonance.png) |
+| --- | --- |
+| Mass-spring-damper, four damping ratios, simulation on top of the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_damping.lms` | Driven oscillator: simulated resonance curve and time histories (applied force).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_resonance.lms` |
+
+| ![viz_projectile](docs/images/projectile.png) | |
+| --- | --- |
+| Projectile range against launch angle: 44 simulations, 45 degrees wins.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_projectile.lms` | |
+
+Every picture is made by the script named under it: it runs the simulation with lmphysics, draws with [lmplot](https://github.com/lmctl-ai/lmplot), [lmdraw](https://github.com/lmctl-ai/lmdraw) or [lmcad](https://github.com/lmctl-ai/lmcad) and writes `images/` into the current directory. `examples/render-all.sh` regenerates `docs/images/`.
 
 It is a scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html) `_dsl_` block and run it. No Python, no data files, no shared libraries.
 
@@ -68,10 +94,13 @@ gravity `(0, 0, -9.81)` by default; lengths in m, masses in kg, angles in rad.
 | `spring(name, A, B, k, c, rest)` | linear spring-damper between the body centres |
 | `motor_speed(name, A, B, px,py,pz, ax,ay,az, "expr(t)")` `motor_angle(...)` | rotational motor, speed or angle given as an expression |
 | `record(name, "col,col")` `step()` `run(t_end)` `save_csv(path)` | fixed-step integration and logging (one CSV row per step) |
+| `record_every(n)` | keep every n-th step (the last state is always written) |
+| `collision_margins(envelope, margin)` | NSC only: `(0, 0)` makes restitution exact (apex = e^2 h) but stacks unstable; default is Chrono's 3 cm / 1 cm |
+| `bounce_speed(v)` | NSC: below this approach speed (default 0.15 m/s) restitution is ignored |
 | `time()` `energy()` `contacts()` | state queries |
 
 `Body`: `pos(x,y,z)` `vel(x,y,z)` `rot_axis(ax,ay,az,angle)` `omega(x,y,z)` `fixed(bool)`
-`mass_props(m, ixx,iyy,izz)` `collide(material)`, and readers `mass x y z vx vy vz wx wy wz lx ly lz speed ke`
+`mass_props(m, ixx,iyy,izz)` `collide(material)`, `force("fx(t)","fy(t)","fz(t)")` and `torque(...)` (world-frame loads as expressions in t), and readers `mass x y z vx vy vz wx wy wz lx ly lz speed ke`
 (`l*` is angular momentum about the centre, world frame; `ke` kinetic energy).
 `Joint`: `angle` (rotation of B about the joint axis since creation, unwrapped) `length` `force`
 (spring force, otherwise reaction magnitude) `torque` and `reaction_x/y/z` (force on B, world frame).
@@ -89,9 +118,17 @@ Record columns are the same names, joints also `fx fy fz tx ty tz`. Schema and r
 
 Measured accuracies are listed in [durable-memory/05-build-run-test.md](durable-memory/05-build-run-test.md).
 
-Combine it with other hosts in one script: [examples/combo/bounce_plot.lms](examples/combo/bounce_plot.lms)
-simulates a bouncing ball with lmphysics and draws the trajectory with
-[lmplot](https://github.com/lmctl-ai/lmplot) (two `_dsl_` blocks, two hosts).
+### Limits worth knowing
+
+- Chrono's NSC contact (cone complementarity) keeps a sliding body `mu |v| dt` above the floor; a block that
+  starts exactly in contact with a speed hops once on the first step. Start it a few millimetres above the floor
+  (see [viz_friction_stop.lms](examples/viz_friction_stop.lms)) or use a smaller step.
+- Restitution with Chrono's default 3 cm collision envelope lands between e^2 and e: use `collision_margins(0, 0)`
+  for isolated impacts. Stacks of boxes need the defaults.
+- `hht`/`newmark` fail on over-constrained mechanisms (planar linkages built from 3D joints): use `trapezoidal`.
+  HHT does not work with NSC contact.
+- Rigid bodies, joints and contact only: no meshes, no soft bodies, no vehicles, no fluids.
+- Results differ in the last digits between platforms; the tests compare with tolerances.
 
 ## Build
 

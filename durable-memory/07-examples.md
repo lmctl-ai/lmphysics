@@ -13,18 +13,35 @@ spring and damped spring, energy, motors, torque-free rotation, pendulum periods
 elliptic integral, hanging reaction = m g, prismatic slide, rigid rod, bounce windows, incline,
 resting contact.
 
-## Pictures (VISUALS.md)
+## Pictures
 
-README starts with a gallery of 8 PNGs in `docs/images/` (<= 300 KB, ~900 px). Every image is produced by an
-example script that is self-contained: `lmctl autorun <raw url>` in an empty directory runs the simulation
-(`system ${dsl_cli(sim)} --dsl ...`), draws with lmplot and writes `images/<name>.png` plus scratch
-`build/` under the current directory. `examples/render-all.sh` runs them all with `docs/` as the cwd to
-refresh `docs/images/`. `test.sh` checks the gallery (files exist, PNG/GIF magic bytes, <= 3 MB), runs every
-example in a scratch directory (needs lmplot: on PATH or `LMPHYSICS_TEST_NETWORK=1`, otherwise it prints
-`SKIPPED` loudly) and compares the CSVs of a second run byte for byte.
+The README opens with 16 images in `docs/images/`, grouped by theme. Every image is made by a self-contained example:
+`lmctl autorun <raw url>` in an empty directory runs the simulation (`system ${dsl_cli(sim)} --dsl ...`), draws, and
+writes `images/<name>.png` plus scratch files under `build/`. `examples/render-all.sh` runs all of them with `docs/` as the
+working directory to refresh `docs/images/`.
 
-New viz examples: `viz_pendulum_phase`, `viz_energy_drift`, `viz_damping`, `viz_restitution`. The old
-examples (`pendulum`, `bouncing_ball`, `incline`, `slider_crank`, `combo/bounce_plot`) now also draw.
-Not done: 3D renders/animation with lmcad (its keyframe CSV needs `t,x,y,z,r,g,b`, which would need a
-`save_keyframes` helper in lmphysics; see 08-open-items.md). Newton's cradle was tried: the rigid NSC solver
-sends part of the momentum back, so it is not a clean demo.
+| example | picture | story and check |
+| --- | --- | --- |
+| `viz_double_pendulum` | double_pendulum.png | chaos: two runs 1e-6 rad apart separate exponentially; energy conserved to 1e-3 (HHT) |
+| `anim_double_pendulum` | double_pendulum.gif | the same system animated: lmdraw frame per 50 ms from the CSV, ffmpeg palette GIF |
+| `viz_pendulum_phase` | pendulum_phase.png | phase portraits up to a release angle of 3.0 rad |
+| `viz_energy_drift` | energy_drift.png | integrator comparison on one joint pendulum |
+| `pendulum`, `slider_crank` | pendulum.png, slider_crank.png | joint reaction force; closed-form slider position |
+| `viz_crank_snapshots` | crank_snapshots.png | lmdraw drawing of the linkage at 4 crank angles from the simulated numbers |
+| `viz_restitution`, `combo/bounce_plot` | restitution.png, bounce.png | exact e^2 apexes with `collision_margins(0, 0)` |
+| `incline`, `viz_incline_forces` | incline.png, incline_forces.png | a = g (sin - mu cos), sticking when tan < mu; free-body diagram (lmdraw) |
+| `viz_friction_stop` | friction_stop.png | 40 sliding distances against v0^2 / (2 mu g) |
+| `viz_pour` | pour.png | 40 balls settled in a box; lmscript turns the final CSV row into an lmcad keyframe file |
+| `viz_damping`, `viz_resonance`, `viz_projectile` | damping.png, resonance.png, projectile.png | closed-form checks for oscillators and ballistics |
+
+How the hosts talk: sweeps print one line per case with `phys.print`; lmscript saves `r.stdout` and lmplot reads the file
+(`every ::0::N` skips the final JSON status line). lmscript has `csv_parse(read_file(..))`, `write_file`, `copy_file`,
+`sprintf` (no `%e`), `sqrt`/`abs`, no trig, no `split`. `${x}` substitutes an integral number as an int literal, so wrap
+with `+ 0.0001` or `float()` where the DSL wants a float. `plot.data` silently truncates large strings (about 8-11 KB seen):
+write a file and read it from gnuplot instead. lmdraw may only write under `build/rendered/` (copy_file to `images/`),
+and its `end _dsl_` line must start at column 1 even inside a loop. lmcad's `read_keyframes_csv` (header
+`t,x,y,z,r,g,b`) doubles as a point-list reader. Chrono's y/z differ from lmcad's (y up): map (x, y, z) to (x, z, y).
+
+`test.sh` checks the gallery (PNG/GIF magic, <= 3 MB, linked examples exist), runs the examples in a scratch directory
+when lmplot is available (`LMPHYSICS_TEST_NETWORK=1`; the anim example is skipped loudly without ffmpeg) and compares the
+CSVs of a second run byte for byte.

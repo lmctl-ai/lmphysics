@@ -98,6 +98,7 @@ if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; t
   n=0
   for src in examples/*.lms examples/combo/*.lms; do
     name="$(basename "$src" .lms)"
+    case "$name" in anim_*) command -v ffmpeg >/dev/null 2>&1 || { echo "SKIPPED: $name needs ffmpeg"; continue; };; esac
     (cd "$EXDIR" && "$LMSCRIPT" "$ROOT/$src") >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name example"; }
     n=$((n+1))
   done
@@ -106,6 +107,7 @@ if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; t
   ok "$n examples ran by themselves (simulate, draw) and wrote $imgs valid PNGs"
   for f in "$EXDIR"/build/examples/*.csv; do echo "$(sha "$f") $(basename "$f")"; done >"$WORK/before.txt"
   for src in examples/*.lms examples/combo/*.lms; do
+    case "$(basename "$src" .lms)" in anim_*) command -v ffmpeg >/dev/null 2>&1 || continue;; esac
     (cd "$EXDIR" && "$LMSCRIPT" "$ROOT/$src") >/dev/null 2>&1 || fail "$src rerun"
   done
   for f in "$EXDIR"/build/examples/*.csv; do echo "$(sha "$f") $(basename "$f")"; done >"$WORK/after.txt"

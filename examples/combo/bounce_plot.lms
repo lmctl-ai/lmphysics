@@ -4,7 +4,7 @@ mkdir("build/examples");
 mkdir("images");
 sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
-s.material("rubber", 0.3, 0.8).timestep(0.001);
+s.material("rubber", 0.3, 0.8).timestep(0.001).collision_margins(0.0, 0.0);
 s.floor("floor", "rubber");
 let ball = s.sphere("ball", 0.1, 500.0).pos(0.0, 0.0, 2.1).vel(1.5, 0.0, 0.0).collide("rubber");
 s.record("ball", "x,z");

@@ -27,25 +27,42 @@ Measured on Linux x86-64 (errors are what the test programs assert, with margin)
   default, `hht_alpha`), so it is not exact for free fall.
 - Everything else uses the NSC/PSOR default solver unless `solver()` says otherwise.
 
-## Restitution (NSC) is not a precise oracle
+## Restitution (NSC) and the collision margins
 
-Chrono applies the Newton rebound model only if the ball would still be penetrating after the
-rebound within the step, otherwise the step ends exactly in touch, absorbing up to
-`(1 - e)` of the approach speed, and the rebound at the next step starts from the reduced speed. The
-effective coefficient lies in `[e^2, e]` depending on the impact phase, independent of dt, so apex
-heights shrink by a factor in `[e^4, e^2]` per bounce. Tests assert that window, not 0.64. SMC
-restitution (Hertz damping derived from `e`) gives ratio ~0.78 for e = 0.8 (apex ratio 0.61 for the second bounce); not asserted.
+Chrono applies the Newton rebound model only if the ball would still be penetrating after the rebound within the
+step. With the default 3 cm collision envelope and 1 cm margin a contact exists before the shapes touch, so the
+step ends exactly in touch (absorbing up to `(1 - e)` of the approach speed) and the rebound happens a step later from
+the reduced speed: the effective coefficient lies in `[e^2, e]` depending on the impact phase, independent of dt (a
+ball with e = 0.5 reached 0.07 m instead of 0.25 m). `System.collision_margins(0, 0)` removes the early contact:
+apex = e^2 h to 1 % (0.248 and 0.0613 m for e = 0.5 from 1 m, tested). The price: boxes stacked three high with a
+sphere on top collapse with envelope 0 (they are stable with the defaults and with envelope >= 5 mm and margin 0 the
+restitution gain is lost), so the margins are opt-in. Only envelope AND margin at 0 fixes restitution; Chrono keeps both
+as process-wide statics read when a body's collision model is created and when the step binds it, so the host sets
+them around every body creation and step of an NSC system (`MarginGuard`). SMC restitution (Hertz damping derived from
+`e`) gives an apex ratio of about 0.78 for e = 0.8; not asserted.
 
-## Newton convergence is not reported
+## Friction hop
 
-HHT with the host preset (30 iterations, rtol 1e-6, atol 1e-9, step control off) routinely ends a step
-"unconverged": in the 115 degree pendulum |R| is 1e-20 but the constraint residual stalls at 1.8e-9 > atol and
-the WRMS update oscillates around 1.6 (round-off). Chrono then accepts the step silently. Treating that as an
-error would reject correct runs, so the host does not check Newton convergence (open item: a residual-based
-check would need Chrono internals that are not exposed).
+Chrono's cone-complementarity friction keeps a sliding body `mu |v| dt` above the floor (the Anitescu relaxation). A
+block that starts exactly in contact therefore gets an upward speed `mu |v|` on the first step and hops (0.14 m for
+mu = 0.3, 5.5 m/s, 2 ms steps). Start it a few millimetres above the floor, or start it at rest, or use a smaller dt; once
+the contact has been established the block slides at a constant gap of `mu |v| dt` (2.9 mm in that example) and the
+friction oracles (stopping distance v^2 / (2 mu g), a = g (sin - mu cos)) hold to 1e-4.
 
 ## Determinism
 
 Single thread (`SetNumThreads(1)`, OpenMP off). Same program twice gives byte-identical CSV on
 one machine. Across platforms (x86 FMA, arm64) expect last-digit differences; contact tests
 assert tolerances, never exact numbers.
+
+## Applied loads, recording
+
+`Body.force/torque` take three expressions in t (world frame, force at the centre of mass) and use Chrono's `ChForce`
+with `WORLD_DIR`. Tested: F = 3 N on 2 kg gives x = F t^2 / 2m to 1e-4; torque about z gives w = tau t / I; a driven damped
+oscillator reaches the analytic steady-state amplitude F0 / sqrt((k - m w^2)^2 + (c w)^2) within 2 % at 49 frequencies
+(`viz_resonance.lms`). `record_every(n)` keeps every n-th step and `save_csv` always appends the final state.
+
+## HHT details
+
+The double pendulum (two revolute joints) is chaotic: with `hht_alpha(0)` (no numerical damping) HHT diverged at 6.9 s;
+the default alpha keeps the energy to 2e-5 over 12 s. Two runs a micro-radian apart separate by one e-fold per ~0.8 s.
