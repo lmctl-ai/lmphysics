@@ -17,9 +17,11 @@ lmplot or the network is available):
    no MinGW runtime DLLs (Windows);
 5. every program under `tests/` and `examples/` compiles to bytecode v5 and runs with `"ok": true`;
    they assert their own physics (closed forms, textbook values; see `04-numerics.md`);
-6. CSV outputs are byte-identical when the examples are re-run;
-7. 19 error cases exit 3 with a message naming the problem (bad kind, duplicate name, non-positive
+6. CSV outputs are byte-identical when the examples are re-run, and a recorded two-body contact run
+   written twice by test.sh itself is byte-identical (also without lmplot); `--notices` equals the file;
+7. 24 error cases exit 3 with a message naming the problem (bad kind, duplicate name, non-positive
    size, unknown material/body/column, late `record`, bad/unknown expression, same body twice, zero
    axis, mixed systems, `stiffness` on NSC, unknown solver/integrator, `newton` on a stepper without
-   Newton, bad timestep, unwritable CSV, failed `assert_close`);
+   Newton, bad timestep, unwritable CSV, failed `assert_close`, NaN friction, redefining an attached
+   material, a diverging (NaN) motor, a singular LU factorization, NSC contact under a linear solver);
 8. usage (exit 2) and missing bytecode (exit 3).

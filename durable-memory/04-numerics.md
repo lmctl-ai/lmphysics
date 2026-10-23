@@ -14,6 +14,8 @@ Measured on Linux x86-64 (errors are what the test programs assert, with margin)
 | motor_speed 2.5 rad/s, 2 s | any | angle exact to ~1e-6 |
 | slider-crank (3 revolute-like joints + guide) | `trapezoidal` | slider x within 2e-5 of closed form, motor angle lags 3.5e-4 (redundant constraints) |
 | block on 30 degree incline | NSC and SMC | a = g (sin - mu cos) to 1e-4 relative; sticks when tan > mu |
+| sphere rolling down 0.3 rad incline, psor 300 | NSC | a = 5/7 g sin to 1e-5 relative, v = w r |
+| cylinder rolling down the same incline | NSC | a = 2/3 g sin within 2.2 % (Bullet cylinder-box contact; asserted to 4 %) |
 
 ## Integrator choices
 
@@ -33,6 +35,14 @@ rebound within the step, otherwise the step ends exactly in touch, absorbing up 
 effective coefficient lies in `[e^2, e]` depending on the impact phase, independent of dt, so apex
 heights shrink by a factor in `[e^4, e^2]` per bounce. Tests assert that window, not 0.64. SMC
 restitution (Hertz damping derived from `e`) gives ratio ~0.78 for e = 0.8 (apex ratio 0.61 for the second bounce); not asserted.
+
+## Newton convergence is not reported
+
+HHT with the host preset (30 iterations, rtol 1e-6, atol 1e-9, step control off) routinely ends a step
+"unconverged": in the 115 degree pendulum |R| is 1e-20 but the constraint residual stalls at 1.8e-9 > atol and
+the WRMS update oscillates around 1.6 (round-off). Chrono then accepts the step silently. Treating that as an
+error would reject correct runs, so the host does not check Newton convergence (open item: a residual-based
+check would need Chrono internals that are not exposed).
 
 ## Determinism
 

@@ -22,6 +22,14 @@ Conventions
   `stiffness()` (SMC only) sets Young's modulus and Poisson ratio (default 2e7 Pa, 0.3).
 - `Body.collide(material)` attaches the body's shape as collision shape; a body without shape
   (`ground`) cannot collide. `floor(name, material)` is a fixed 200x200x2 slab with its top at z = 0.
-- Cylinder axis is the local y axis (Chrono's convention).
+- Cylinder axis is the local y axis, for the inertia and the collision shape. (Chrono 9's
+  `ChCollisionShapeCylinder` runs along z; the host adds it rotated -90 degrees about x. Before that fix
+  a cylinder collided as if standing upright while spinning like one lying down.)
+- Materials are fixed once a body uses them: `material()`/`stiffness()` on a material already attached by
+  `collide()`/`floor()` is an error (Chrono shapes hold the old object, so a redefinition would be silently ignored).
+- A step is an error (exit 3) when any body state becomes NaN/inf, when a direct solver's factorization
+  fails (Chrono only prints "Solver setup failed" and continues), or when an NSC system has contacts
+  while a linear solver (sparse_lu/sparse_qr/minres, e.g. preset by `hht`) is active (Chrono returns garbage:
+  a ball on the floor ended at z = 88 km).
 
 Counts: `Phys` 4, `System` 29, `Body` 22, `Joint` 7 distinct method names (see the JSON).
