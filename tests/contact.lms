@@ -69,5 +69,33 @@ let rest = sp.sphere("rest", 0.1, 500.0).pos(0.0, 0.0, 0.1005).collide("hard");
 sp.run(0.5);
 phys.assert_close(rest.z(), 0.1, 0.002);
 phys.assert_close(rest.vz(), 0.0, 0.05);
+# Rolling without slipping down a 0.3 rad incline (mu = 0.8 > tan(th) / 3): a = g sin(th) / (1 + I / (m r^2)),
+# 5/7 g sin(th) for a solid sphere and 2/3 g sin(th) for a solid cylinder (axis = local y, across the slope).
+# Measured between t = 0.5 and 1.5 s, after the touch-down transient. Bullet's cylinder-box contact is ~2 % slow.
+let rth = 0.3;
+let rs = phys.system("nsc");
+rs.material("m", 0.8, 0.0).timestep(0.001).solver("psor", 300);
+rs.box("ramp", 40.0, 4.0, 0.5, 1000.0).rot_axis(0.0, 1.0, 0.0, rth).fixed(true).collide("m");
+let roller = rs.sphere("roller", 0.2, 500.0).pos(0.45 * sin(rth), 0.0, 0.45 * cos(rth)).collide("m");
+rs.run(0.5);
+let u1 = roller.vx() * cos(rth) - roller.vz() * sin(rth);
+rs.run(1.5);
+phys.assert_close(roller.vx() * cos(rth) - roller.vz() * sin(rth) - u1, 5.0 / 7.0 * 9.81 * sin(rth), 0.0005);
+phys.assert_close(roller.wy() * 0.2, roller.vx() * cos(rth) - roller.vz() * sin(rth), 0.001);   # no slip: v = w r
+let rc = phys.system("nsc");
+rc.material("m", 0.8, 0.0).timestep(0.001).solver("psor", 300);
+rc.box("ramp", 40.0, 4.0, 0.5, 1000.0).rot_axis(0.0, 1.0, 0.0, rth).fixed(true).collide("m");
+let drum = rc.cylinder("drum", 0.2, 1.0, 500.0).pos(0.45 * sin(rth), 0.0, 0.45 * cos(rth)).collide("m");
+rc.run(0.5);
+let c1 = drum.vx() * cos(rth) - drum.vz() * sin(rth);
+rc.run(1.5);
+phys.assert_close(drum.vx() * cos(rth) - drum.vz() * sin(rth) - c1, 2.0 / 3.0 * 9.81 * sin(rth), 0.08);
+# A cylinder lies on its side: it rests with its centre one radius (not half its height) above the floor.
+let cf = phys.system("nsc");
+cf.material("m", 0.5, 0.0).timestep(0.001);
+cf.floor("floor", "m");
+let log = cf.cylinder("log", 0.2, 1.0, 500.0).pos(0.0, 0.0, 0.25).collide("m");
+cf.run(1.0);
+phys.assert_close(log.z(), 0.2, 0.002);
 end _dsl_
 savedsl(p, out);

@@ -636,11 +636,11 @@ void register_host(dslvm::Registry &r, Host &h) {
     if (it == bo.sys->mats.end()) throw dslvm::Error("Body.collide: unknown material '" + a[0].s + "'");
     if (bo.shape == Shape::None) throw dslvm::Error("Body.collide: body '" + bo.name + "' has no shape (ground bodies cannot collide)");
     if (bo.collide) throw dslvm::Error("Body.collide: body '" + bo.name + "' already collides");
-    std::shared_ptr<ch::ChCollisionShape> sh;
-    if (bo.shape == Shape::Box) sh = chrono_types::make_shared<ch::ChCollisionShapeBox>(it->second, bo.d[0], bo.d[1], bo.d[2]);
-    else if (bo.shape == Shape::Sphere) sh = chrono_types::make_shared<ch::ChCollisionShapeSphere>(it->second, bo.d[0]);
-    else sh = chrono_types::make_shared<ch::ChCollisionShapeCylinder>(it->second, bo.d[0], bo.d[1]);
-    bo.b->AddCollisionShape(sh);
+    if (bo.shape == Shape::Box) bo.b->AddCollisionShape(chrono_types::make_shared<ch::ChCollisionShapeBox>(it->second, bo.d[0], bo.d[1], bo.d[2]));
+    else if (bo.shape == Shape::Sphere) bo.b->AddCollisionShape(chrono_types::make_shared<ch::ChCollisionShapeSphere>(it->second, bo.d[0]));
+    else  // Chrono 9's collision cylinder runs along the shape's z axis; ours (and the inertia) along the body's y axis
+      bo.b->AddCollisionShape(chrono_types::make_shared<ch::ChCollisionShapeCylinder>(it->second, bo.d[0], bo.d[1]),
+                              ch::ChFrame<>(ch::VNULL, ch::QuatFromAngleX(-ch::CH_PI_2)));
     bo.b->EnableCollision(true);
     bo.collide = true;
     return Value::object("Body", p);
