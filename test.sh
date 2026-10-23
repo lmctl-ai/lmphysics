@@ -144,7 +144,12 @@ expect_error newton_na 'let s = phys.system("nsc"); s.integrator("euler_projecte
 expect_error badtimestep 'let s = phys.system("nsc"); s.timestep(0.0);' "must be positive"
 expect_error badcsv 'let s = phys.system("nsc"); s.save_csv("/nonexistent-dir/x.csv");' "cannot write"
 expect_error assertfail 'phys.assert_close(1.0, 2.0, 0.1);' "assert_close failed"
-ok "errors stop the program with exit 3 and a clear message (19 cases)"
+expect_error nanfriction 'let s = phys.system("nsc"); s.material("m", sqrt(-1.0), 0.5);' "friction >= 0"
+expect_error matredefine 'let s = phys.system("nsc"); s.material("m", 0.5, 0.0); s.floor("f", "m"); s.material("m", 0.9, 0.0);' "already attached"
+expect_error diverged 'let s = phys.system("nsc"); s.gravity(0.0, 0.0, 0.0); let g = s.ground("g"); let a = s.sphere("a", 0.1, 1.0).pos(1.0, 0.0, 0.0); let m = s.motor_speed("m", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, "sqrt(-1)"); s.run(0.1);' "diverged: body 'a'"
+expect_error singular 'let s = phys.system("nsc"); s.integrator("hht"); let g = s.ground("g"); let a = s.box("a", 1.0, 0.1, 0.1, 100.0).pos(0.5, 0.0, 0.0); let r1 = s.revolute("r1", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); let r2 = s.revolute("r2", g, a, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0); s.step();' "factorization failed"
+expect_error nsc_direct 'let s = phys.system("nsc"); s.integrator("hht"); s.floor("f", "default"); let b = s.sphere("b", 0.1, 500.0).pos(0.0, 0.0, 0.3).collide("default"); s.run(1.0);' "nsc contact needs a complementarity solver"
+ok "errors stop the program with exit 3 and a clear message (24 cases)"
 
 set +e; "$HOST" --dsl "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"

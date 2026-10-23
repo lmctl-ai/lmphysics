@@ -6,6 +6,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -29,6 +30,7 @@
 #include "chrono/physics/ChLinkTSDA.h"
 #include "chrono/physics/ChSystemNSC.h"
 #include "chrono/physics/ChSystemSMC.h"
+#include "chrono/solver/ChDirectSolverLS.h"
 #include "chrono/solver/ChIterativeSolverLS.h"
 #include "chrono/timestepper/ChTimestepper.h"
 #include "chrono/solver/ChIterativeSolverVI.h"
@@ -51,6 +53,13 @@ class ExprFunction : public ch::ChFunction {
   double GetVal(double t) const override { return e_->eval(&t); }
  private:
   std::shared_ptr<lmphysics::Expr> e_;
+};
+
+// Chrono's direct solvers print "Solver setup failed" to stderr and let the step continue with a stale or garbage
+// solution. These wrappers remember the failure so that the step reports it as an error instead.
+struct SolverFailure { bool failed = false; };
+template <class Base> class CheckedSolver : public Base, public SolverFailure {
+  void PrintErrorMessage() override { failed = true; }
 };
 
 struct SysObj;
@@ -91,6 +100,8 @@ struct SysObj {
   double dt = 1e-3;
   bool started = false;
   std::string integrator = "euler";
+  std::string solver = "psor";
+  std::set<std::string> used_mats;  // materials attached to collision shapes: redefining them would not reach the shapes
 };
 
 struct Host { std::vector<std::unique_ptr<SysObj>> systems; };
@@ -278,17 +289,48 @@ void start(SysObj &s) {
   capture_row(s);
 }
 
+bool finite3(const ch::ChVector3d &v) { return std::isfinite(v.x()) && std::isfinite(v.y()) && std::isfinite(v.z()); }
+
 void do_step(SysObj &s) {
   start(s);
+  const double t0 = s.sys->GetChTime();
+  auto *flag = dynamic_cast<SolverFailure *>(s.sys->GetSolver().get());
+  if (flag) flag->failed = false;
   try { s.sys->DoStepDynamics(s.dt); }
   catch (const std::exception &e) {
     std::string hint = (s.integrator == "hht" || s.integrator == "newmark")
                            ? " (hint: hht and newmark need a direct solver and enough Newton iterations: solver(\"sparse_lu\", 1), newton(30, 1e-6, 1e-9))" : "";
     throw dslvm::Error(std::string("step failed: ") + e.what() + hint);
   }
+  std::string at = "step failed at t = " + fmt(t0) + ": ";
+  if (flag && flag->failed)
+    throw dslvm::Error(at + "the " + s.solver + " factorization failed (singular system matrix: redundant constraints, or a body "
+                       "without mass in a joint; try solver(\"psor\", 100) with integrator(\"trapezoidal\"))");
+  // Linear solvers (direct, minres) cannot solve the complementarity problem of NSC contact: Chrono silently returns garbage.
+  if (!s.smc && !dynamic_cast<ch::ChIterativeSolverVI *>(s.sys->GetSolver().get()) && s.sys->GetNumContacts() > 0)
+    throw dslvm::Error(at + "nsc contact needs a complementarity solver (psor pjacobi pminres bb apgd), but " + s.solver + " is a linear solver" +
+                       (s.integrator == "hht" || s.integrator == "newmark" ? " (preset by integrator(\"" + s.integrator + "\"))" : std::string()) +
+                       "; use system(\"smc\") for hht/newmark with contact, or solver(\"psor\", 100)");
+  for (auto &bo : s.bodies) {
+    auto &b = *bo->b;
+    ch::ChQuaterniond q = b.GetRot();
+    if (!finite3(b.GetPos()) || !finite3(b.GetPosDt()) || !finite3(b.GetAngVelParent()) ||
+        !(std::isfinite(q.e0()) && std::isfinite(q.e1()) && std::isfinite(q.e2()) && std::isfinite(q.e3())))
+      throw dslvm::Error(at + "the simulation diverged: body '" + bo->name +
+                         "' has a non-finite position or velocity (check motor expressions, stiffness and the timestep)");
+  }
   for (auto &j : s.joints) track_angle(*j);
   capture_row(s);
 }
+
+// Chrono's solver types, with the direct solvers wrapped so that a failed factorization is reported.
+void use_solver(SysObj &s, ch::ChSolver::Type type, const std::string &name) {
+  s.sys->SetSolverType(type);  // also resets the system descriptor
+  if (type == ch::ChSolver::Type::SPARSE_LU) s.sys->SetSolver(chrono_types::make_shared<CheckedSolver<ch::ChSolverSparseLU>>());
+  if (type == ch::ChSolver::Type::SPARSE_QR) s.sys->SetSolver(chrono_types::make_shared<CheckedSolver<ch::ChSolverSparseQR>>());
+  s.solver = name;
+}
+
 
 double total_energy(SysObj &s) {
   double e = 0;
@@ -368,7 +410,7 @@ void register_host(dslvm::Registry &r, Host &h) {
       throw dslvm::Error("System.solver: unknown solver '" + a[0].s + "' (psor pjacobi minres pminres bb apgd sparse_lu sparse_qr)");
     if (a[1].i < 1 || a[1].i > 1000000) throw dslvm::Error("System.solver: iterations must be in 1..1000000");
     auto &sys = *S(p).sys;
-    sys.SetSolverType(it->second);
+    use_solver(S(p), it->second, a[0].s);
     if (auto *vi = dynamic_cast<ch::ChIterativeSolverVI *>(sys.GetSolver().get())) vi->SetMaxIterations((int)a[1].i);
     else if (auto *ls = dynamic_cast<ch::ChIterativeSolverLS *>(sys.GetSolver().get())) ls->SetMaxIterations((int)a[1].i);
     return sys_value(p);
@@ -384,7 +426,7 @@ void register_host(dslvm::Registry &r, Host &h) {
     // HHT and Newmark solve a DAE with Newton iterations: give them a direct solver and a Newton budget that converges
     // for joints (Chrono's defaults of 6 iterations and PSOR do not). solver() and newton() override these.
     if (a[0].s == "hht" || a[0].s == "newmark") {
-      S(p).sys->SetSolverType(ch::ChSolver::Type::SPARSE_LU);
+      use_solver(S(p), ch::ChSolver::Type::SPARSE_LU, "sparse_lu");
       auto *it = dynamic_cast<ch::ChImplicitIterativeTimestepper *>(S(p).sys->GetTimestepper().get());
       it->SetMaxIters(30); it->SetRelTolerance(1e-6); it->SetAbsTolerances(1e-9);
     }
@@ -417,7 +459,11 @@ void register_host(dslvm::Registry &r, Host &h) {
   });
   method(r, "System", "material", {"string", "float", "float"}, "System", [](void *p, Args &a) {
     auto &s = S(p);
-    if (a[1].f < 0 || a[2].f < 0 || a[2].f > 1) throw dslvm::Error("System.material: friction >= 0 and restitution in [0,1] required");
+    if (!(a[1].f >= 0) || !std::isfinite(a[1].f) || !(a[2].f >= 0 && a[2].f <= 1))
+      throw dslvm::Error("System.material: friction >= 0 and restitution in [0,1] required");
+    if (a[0].s.empty()) throw dslvm::Error("System.material: name must not be empty");
+    if (s.used_mats.count(a[0].s))
+      throw dslvm::Error("System.material: material '" + a[0].s + "' is already attached to a body; define materials before collide()/floor()");
     std::shared_ptr<ch::ChContactMaterial> m;
     if (s.smc) { auto q = chrono_types::make_shared<ch::ChContactMaterialSMC>(); q->SetYoungModulus(2e7f); q->SetPoissonRatio(0.3f); m = q; }
     else m = chrono_types::make_shared<ch::ChContactMaterialNSC>();
@@ -432,6 +478,8 @@ void register_host(dslvm::Registry &r, Host &h) {
     if (it == s.mats.end()) throw dslvm::Error("System.stiffness: unknown material '" + a[0].s + "'");
     auto *m = dynamic_cast<ch::ChContactMaterialSMC *>(it->second.get());
     if (!m) throw dslvm::Error("System.stiffness: only smc systems have Young's modulus (use system(\"smc\"))");
+    if (s.used_mats.count(a[0].s))
+      throw dslvm::Error("System.stiffness: material '" + a[0].s + "' is already attached to a body; set stiffness before collide()/floor()");
     positive("System.stiffness", "Young's modulus", a[1].f);
     if (!(a[2].f > -1 && a[2].f < 0.5)) throw dslvm::Error("System.stiffness: Poisson ratio must be in (-1, 0.5)");
     m->SetYoungModulus((float)a[1].f); m->SetPoissonRatio((float)a[2].f);
@@ -473,6 +521,7 @@ void register_host(dslvm::Registry &r, Host &h) {
     b->b->SetPos(ch::ChVector3d(0, 0, -1));
     b->b->SetFixed(true);
     b->b->AddCollisionShape(chrono_types::make_shared<ch::ChCollisionShapeBox>(s.mats[a[1].s], 200.0, 200.0, 2.0));
+    s.used_mats.insert(a[1].s);
     b->b->EnableCollision(true);
     b->collide = true;
     return body_value(b);
@@ -641,6 +690,7 @@ void register_host(dslvm::Registry &r, Host &h) {
     else  // Chrono 9's collision cylinder runs along the shape's z axis; ours (and the inertia) along the body's y axis
       bo.b->AddCollisionShape(chrono_types::make_shared<ch::ChCollisionShapeCylinder>(it->second, bo.d[0], bo.d[1]),
                               ch::ChFrame<>(ch::VNULL, ch::QuatFromAngleX(-ch::CH_PI_2)));
+    bo.sys->used_mats.insert(a[0].s);
     bo.b->EnableCollision(true);
     bo.collide = true;
     return Value::object("Body", p);
