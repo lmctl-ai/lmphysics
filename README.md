@@ -76,6 +76,8 @@ Combine it with other hosts in one script: [examples/combo/bounce_plot.lms](exam
 simulates a bouncing ball with lmphysics and draws the trajectory with
 [lmplot](https://github.com/lmctl-ai/lmplot) (two `_dsl_` blocks, two hosts).
 
+![Bouncing ball](examples/renders/bounce.png)
+
 ## Examples
 
 | Program | Shows |
