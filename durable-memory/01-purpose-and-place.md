@@ -9,7 +9,7 @@ bytecode through an embedded schema. Script = policy and control flow, host = he
   `--dsl-schema [--json]`, `--dsl-signatures` (exit codes 2 usage, 3 load/run error).
 - **Chrono, not Bullet.** The feasibility note allowed a fallback to Bullet if Chrono could not be
   built statically on all platforms. It can: the core module needs only Eigen, builds in ~4 min on
-  4 cores, and yields a 9.8 MB static Linux binary. Chrono already provides joints, motors, TSDAs
+  4 cores, and yields one Linux executable (dynamic glibc >= 2.35, static scientific/C++ code). Chrono already provides joints, motors, TSDAs
   and NSC/SMC contact; an own solver on top of Bullet would have been the bigger project.
 - **Scope (v0.1)**: NSC and SMC systems; box, sphere, cylinder bodies with computed inertia; fixed
   bodies; revolute, prismatic, spherical, lock, distance joints; TSDA spring-damper; rotational motors

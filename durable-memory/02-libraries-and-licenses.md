@@ -10,8 +10,9 @@
 | Eigen | pinned like lmnum (3147391d) | MPL-2.0, `EIGEN_MPL2_ONLY` | linear algebra |
 | cpp-dsl-sdk `dslvm.hpp` | pinned in `sdk.lock` | MIT | DSL VM |
 
-No GPL/AGPL code. The only copyleft-offered component (GIMPACT) is used under its zlib option; the
-notice file says so. All texts are in `THIRD_PARTY_NOTICES`, embedded in the binary (`--notices`).
+Scientific components use the license options above; GIMPACT uses its zlib option and Eigen is built
+with EIGEN_MPL2_ONLY. Linux uses dynamic system glibc (LGPL-2.1 or later) and static GCC C++ runtimes
+with the GCC Runtime Library Exception. Full notices are embedded in the binary (`--notices`).
 
 ## How Chrono is built (cmake/Chrono.cmake)
 

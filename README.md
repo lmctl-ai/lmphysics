@@ -1,6 +1,6 @@
 # lmphysics
 
-**Rigid-body physics (Project Chrono) in one static executable, driven from lmscript.**
+**Rigid-body physics (Project Chrono) in one executable, driven from lmscript.**
 
 [![CI](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmphysics/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmphysics?label=release)](https://github.com/lmctl-ai/lmphysics/releases)
@@ -115,8 +115,9 @@
 Every picture is made by the script named under it: it runs the simulation with lmphysics, draws with [lmplot](https://github.com/lmctl-ai/lmplot), [lmdraw](https://github.com/lmctl-ai/lmdraw), [lmcad](https://github.com/lmctl-ai/lmcad) or [lmblender](https://github.com/lmctl-ai/lmblender) and writes `images/` into the current directory. `examples/render-all.sh` regenerates `docs/images/`. The Cycles renders pass recorded positions and quaternions through the [portable CSV-to-OBJ pose bridge](examples/bridge/README.md) (boxes, spheres, cylinders) to [lmblender](https://github.com/lmctl-ai/lmblender).
 
 **Quick start:** `npm i -g @lmctl-ai/lmctl`, then paste any `lmctl autorun` line above into a terminal; it downloads lmphysics and the drawing host and writes the picture to `images/`. The gear train, Cardan joint, quarter-car, damper sweep and baseball-drag pictures use API added in v0.1.2 (`gear`, `universal`, linear motors, `spring_at`, `Body.drag`).
+Linux downloads require **dynamic glibc >= 2.35** (Ubuntu 22.04 or newer).
 
-It is a scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html) `_dsl_` block and run it. No Python, no data files, no shared libraries.
+It is a scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html) `_dsl_` block and run it. No Python, data files or third-party shared libraries are needed. Linux uses dynamic glibc >= 2.35.
 
 ```
 # pendulum.lms
@@ -218,8 +219,12 @@ cmake -S . -B build && cmake --build build
 ./test.sh                       # needs lmscript on PATH
 ```
 
-Linux builds are fully static; macOS links only system libraries; Windows links the MinGW runtime
-statically. `lmphysics --notices` prints the license texts of everything inside.
+Linux uses dynamic glibc >= 2.35, with Chrono, Bullet, Eigen and GCC C++ runtimes static.
+macOS links only system libraries; Windows links the MinGW runtime statically. `lmphysics --notices` prints the license texts of everything inside.
+
+`lmphysics --version` remains exactly `lmphysics X.Y.Z` for installer compatibility.
+The Linux runtime baseline applies to x64 and ARM64; no relink-object archive
+or third-party shared libraries are required.
 
 ## Resource limits
 
