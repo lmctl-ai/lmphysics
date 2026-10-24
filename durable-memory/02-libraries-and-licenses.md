@@ -8,7 +8,7 @@
 | HACD, HACDv2 (+ Newton Game Dynamics code) | bundled | BSD-3, MIT, zlib | convex decomposition, unreachable |
 | tinyobjloader, libstl | bundled | MIT | mesh loading, unreachable |
 | Eigen | pinned like lmnum (3147391d) | MPL-2.0, `EIGEN_MPL2_ONLY` | linear algebra |
-| cpp-dsl-sdk `dslvm.hpp` | pinned in `sdk.lock` | MIT | DSL VM |
+| lmcode-cpp `dslvm.hpp` | pinned in `sdk.lock` | MIT | DSL VM |
 
 Scientific components use the license options above; GIMPACT uses its zlib option and Eigen is built
 with EIGEN_MPL2_ONLY. Linux uses dynamic system glibc (LGPL-2.1 or later) and static GCC C++ runtimes
