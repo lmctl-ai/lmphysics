@@ -46,7 +46,7 @@ and its `end _dsl_` line must start at column 1 even inside a loop. lmcad's `rea
 when lmplot is available (`LMPHYSICS_TEST_NETWORK=1`; the anim example is skipped loudly without ffmpeg) and compares the
 CSVs of a second run byte for byte.
 
-## Worked-problem examples (2026-10-23, Claude QA pass)
+## Worked-problem examples (2026-10-23 verification pass)
 
 Seventeen scripts, each a story with a known answer checked inside the script:
 rolling_race (a = g sin / (1 + I/m r^2), spheres carry cylinder/hoop inertia because Bullet's cylinder contact
