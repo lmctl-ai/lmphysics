@@ -6,7 +6,7 @@
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.gravity(0.0, 0.0, 0.0).timestep(0.0005).integrator("trapezoidal");
 let base = s.ground("base");
@@ -20,7 +20,7 @@ s.prismatic("guide", base, slider, 0.4, 0.0, 0.0, 1.0, 0.0, 0.0);
 s.record("slider", "x").record("drive", "angle");
 s.run(1.3);
 s.save_csv("build/examples/crank_snapshots.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_crank_snapshots-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_crank_snapshots-sim.dslb;
 assert(r.code == 0);
@@ -78,7 +78,7 @@ sx3 = 650.0 + SC * x3 + 0.0001;
 lab3 = sprintf("crank angle %.0f deg: slider at %.4f m (closed form %.4f m)", phi_deg3, x3, closed3);
 assert(abs(x3 - closed3) < 0.001);
 
-d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(1000, 640, "#0f1720");
 scene.text(40.0, 44.0, 24.0, "Slider-crank mechanism at four crank angles (counter-clockwise motor)", "#e6edf3").set_attr("font-weight", "700");
 scene.text(40.0, 72.0, 14.0, "Positions are the ones lmphysics simulated (motor angle and slider position); the linkage is placed from them.", "#9fb3c8");
@@ -111,7 +111,7 @@ scene.circle(650.0, 450.0, 7.0, "#e6edf3");
 scene.circle(${wx3}, ${wy3}, 5.0, "#0f1720");
 scene.text(560.0, 535.0, 13.0, ${lab3}, "#9fb3c8");
 scene.render_png("build/rendered/crank_snapshots.png", 1000, 640, 1);
-end _dsl_
+end _lmcode_
 savedsl(d, "build/viz_crank_snapshots-draw.dslb");
 r = system ${dsl_cli(d)} --dsl build/viz_crank_snapshots-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

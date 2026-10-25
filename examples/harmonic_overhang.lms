@@ -9,7 +9,7 @@
 import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536a04b8d4448162c4a229d6/examples/bridge/pose_obj.lms";
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let L = 0.4;
 let n = 6;
 let s = phys.system("nsc");
@@ -32,7 +32,7 @@ for (k in range(0, 2)) {
 }
 s.run(2.0);
 s.save_csv("build/examples/harmonic_overhang.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/harmonic_overhang-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/harmonic_overhang-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -62,7 +62,7 @@ for (k in range(0, 2)) {
   }
 }
 
-render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+render = _lmcode_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
 let oak = scene.material(0.55, 0.36, 0.2, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0);
 let table = scene.material(0.12, 0.07, 0.04, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0);
 let red = scene.material(0.75, 0.16, 0.12, 0.0, 0.45, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -85,7 +85,7 @@ scene.camera_look_at(0.0, -3.7, 0.95, -0.12, 0.0, 0.3, 30.0);
 scene.set_view_transform("AgX");
 scene.render_settings(6, 17, true);
 scene.render_png("images/harmonic_overhang.png", 48, 900, 600);
-end _dsl_
+end _lmcode_
 savedsl(render, "build/harmonic_overhang-render.dslb");
 argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/harmonic_overhang-render.dslb");
 r = system(argv, 300000);

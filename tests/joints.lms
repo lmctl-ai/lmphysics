@@ -1,6 +1,6 @@
 # Joints: pendulum periods against the elliptic-integral solution, reactions, rigid links, slider.
 out = ARGV.len() > 0 ? ARGV[0] : "build/joints.dslb";
-p = _dsl_ cli="lmphysics";
+p = _lmcode_ cli="lmphysics";
 # A bob (radius 1 cm) on a revolute pin at the origin, released at angle th0 from hanging. The time to
 # cross the vertical is T/4 = K(sin(th0/2)) / w0 with w0^2 = g L / (L^2 + 2/5 r^2) and K from the AGM.
 let g = phys.system("nsc");
@@ -87,5 +87,5 @@ let pin3 = h.revolute("pin", anchor3, still, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 h.run(0.5);
 phys.assert_close(pin3.reaction_z(), still.mass() * 9.81, 0.0001);
 phys.assert_close(still.z(), -1.0, 0.0000001);
-end _dsl_
+end _lmcode_
 savedsl(p, out);

@@ -3,7 +3,7 @@
 # Pin the shared module so raw-URL autorun works from an empty directory.
 import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/379bdafd4ba99c4af432fbbc334b5306e5de9a39/examples/bridge/pose_obj.lms";
 mkdir("build/examples"); mkdir("images");
-sim=_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim=_lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s=phys.system("nsc");
 s.material("clay",0.55,0.05).timestep(0.002).solver("apgd",100).record_every(100);
 s.floor("floor","clay");
@@ -13,7 +13,7 @@ for (i in range(0,6)) {
   s.record(name,"x,y,z,qw,qx,qy,qz");
 }
 s.run(1.6); s.save_csv("build/examples/brick_poses.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim,"build/blender_brick_stack-sim.dslb");
 r=system ${dsl_cli(sim)} --dsl build/blender_brick_stack-sim.dslb;
 if (r.code!=0) { println(r.stdout); println(r.stderr); } assert(r.code==0);
@@ -26,7 +26,7 @@ for (j in range(0,3)) {
     pose_box_obj(frames[j],"brick"+str(i),0.7,0.38,0.25,"build/examples/brick_"+str(j)+"_"+str(i)+".obj");
   }
 }
-draw=_dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+draw=_lmcode_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
 let clay=scene.material(0.78,0.22,0.065,0.0,0.45,0.0,0.0,0.0,0.0,0.0);
 let blue=scene.material(0.08,0.29,0.43,0.0,0.38,0.0,0.0,0.0,0.0,0.0);
 for (j in range(0,3)) {
@@ -49,7 +49,7 @@ scene.world_color(0.7,0.8,1.0,0.25);
 scene.set_view_transform("AgX");
 scene.render_settings(6,17,true);
 scene.render_png("images/blender_brick_stack.png",32,960,560);
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/blender_brick_stack-draw.dslb");
 argv=dsl_cli(draw); push(argv,"--dsl"); push(argv,"build/blender_brick_stack-draw.dslb");
 r=system(argv,300000);

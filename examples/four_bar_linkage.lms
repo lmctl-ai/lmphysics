@@ -36,7 +36,7 @@ psi = atan2s(cz, cx - g);
 mx = (bx + cx) / 2.0; mz = (bz + cz) / 2.0;
 rx = (g + cx) / 2.0; rz = cz / 2.0;
 
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").solver("psor", 200).timestep(0.0005).record_every(10);
 let frame = s.ground("frame");
@@ -52,7 +52,7 @@ s.revolute("o4", frame, rocker, ${g}, 0.0, 0.0, 0.0, 1.0, 0.0);
 s.record("crank", "x,y,z,qw,qx,qy,qz").record("coupler", "x,y,z,qw,qx,qy,qz").record("rocker", "x,y,z,qw,qx,qy,qz");
 s.run(1.0);
 s.save_csv("build/examples/four_bar.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/four_bar_linkage-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/four_bar_linkage-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -95,7 +95,7 @@ bpx = px(H[0][0]); bpz = pz(H[0][2]);
 cpx = px(H[1][0]); cpz = pz(H[1][2]);
 lim = sprintf("rocker swings between x = %.3f and %.3f m: law of cosines %.3f and %.3f m", cmin, cmax, lo, hi);
 
-d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 600, "#0f1720");
 scene.text(40.0, 44.0, 24.0, "Four-bar linkage: a crank-rocker and its coupler curve", "#e6edf3").set_attr("font-weight", "700");
 scene.text(40.0, 72.0, 14.0, "Ground 40 cm, crank 10 cm, coupler 35 cm, rocker 30 cm. Faint: twelve crank angles simulated by lmphysics.", "#9fb3c8");
@@ -117,7 +117,7 @@ scene.text(${hx} + 12.0, ${hz} - 10.0, 14.0, "coupler point", "#ffd166");
 scene.text(40.0, 540.0, 14.0, ${lim}, "#e6edf3");
 scene.text(40.0, 562.0, 13.0, "The joints close the loop in every recorded step to 1 mm (trapezoidal integrator, PSOR).", "#9fb3c8");
 scene.render_png("build/rendered/four_bar_linkage.png", 900, 600, 1);
-end _dsl_
+end _lmcode_
 savedsl(d, "build/four_bar_linkage-draw.dslb");
 r = system ${dsl_cli(d)} --dsl build/four_bar_linkage-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

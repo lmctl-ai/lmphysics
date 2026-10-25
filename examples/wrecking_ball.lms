@@ -8,7 +8,7 @@
 import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536a04b8d4448162c4a229d6/examples/bridge/pose_obj.lms";
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.material("wood", 0.5, 0.1).timestep(0.001).solver("apgd", 150).record_every(25);
 s.floor("floor", "wood");
@@ -32,7 +32,7 @@ s.record("ball", "x,y,z,qw,qx,qy,qz,vy,vz");
 # The pyramid settles during the ball's quarter swing (about 1 s) before the hit.
 s.run(4.0);
 s.save_csv("build/examples/wrecking_ball.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/wrecking_ball-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/wrecking_ball-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -57,7 +57,7 @@ for (c in range(0, 15)) { pose_box_obj(frame, "c" + str(c), 0.3, 0.3, 0.3, "buil
 pose_sphere_obj(frame, "ball", 0.25, 48, 0, "build/examples/wb_ball.obj");
 by = num(frame["ball.y"]); bz = num(frame["ball.z"]);
 
-render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+render = _lmcode_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
 let crate = scene.material(0.62, 0.42, 0.22, 0.0, 0.55, 0.0, 0.0, 0.0, 0.0, 0.0);
 let crate2 = scene.material(0.5, 0.3, 0.14, 0.0, 0.55, 0.0, 0.0, 0.0, 0.0, 0.0);
 let steel = scene.material(0.2, 0.2, 0.22, 1.0, 0.35, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -78,7 +78,7 @@ scene.camera_look_at(-9.5, -1.8, 2.8, 0.0, 0.0, 2.0, 38.0);
 scene.set_view_transform("AgX");
 scene.render_settings(6, 17, true);
 scene.render_png("images/wrecking_ball.png", 48, 900, 600);
-end _dsl_
+end _lmcode_
 savedsl(render, "build/wrecking_ball-render.dslb");
 argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/wrecking_ball-render.dslb");
 r = system(argv, 300000);

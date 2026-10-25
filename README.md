@@ -121,7 +121,7 @@ It is a scripting host, not a command-line tool: write an [lmscript](https://lmc
 
 ```
 # pendulum.lms
-p = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+p = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.integrator("hht").timestep(0.0005);
 let pin = s.ground("pin");
@@ -132,7 +132,7 @@ let e0 = s.energy();
 s.run(5.0);
 phys.assert_close(s.energy() / e0, 1.0, 0.0001);                     # energy is conserved
 s.save_csv("pendulum.csv");
-end _dsl_
+end _lmcode_
 savedsl(p, "pendulum.dslb");
 system ${dsl_cli(p)} --dsl pendulum.dslb;
 ```

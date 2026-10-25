@@ -7,7 +7,7 @@
 # Output: images/newtons_cradle.png, images/newtons_cradle_render.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.material("steel", 0.0, 0.98).timestep(0.0001).collision_margins(0.0, 0.0).solver("psor", 200).bounce_speed(0.01).record_every(20);
 let top = s.ground("top");
@@ -25,7 +25,7 @@ for (i in range(0, 5)) {
 let e0 = s.energy();
 s.run(6.0);
 s.save_csv("build/examples/newtons_cradle.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/newtons_cradle-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/newtons_cradle-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -49,7 +49,7 @@ assert(h_out / h_in > 0.85 && h_out / h_in < 1.0);
 x0 = num(row["b0.x"]); x1 = num(row["b1.x"]); x2 = num(row["b2.x"]); x3 = num(row["b3.x"]); x4 = num(row["b4.x"]);
 z0 = num(row["b0.z"]); z1 = num(row["b1.z"]); z2 = num(row["b2.z"]); z3 = num(row["b3.z"]); z4 = num(row["b4.z"]);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/newtons_cradle.png", 900, 560);
 plot.cmd("set datafile separator ','");
 plot.cmd("set title 'Newton''s cradle: swing of each ball (lmphysics, restitution 0.98)'");
@@ -61,13 +61,13 @@ plot.cmd("set xrange [0:6]");
 plot.cmd("set yrange [-150:200]");
 plot.cmd("plot 'build/examples/newtons_cradle.csv' skip 1 using 1:(1000*($2+0.101)) with lines lw 2 lc rgb '#d62728' title 'ball 1 (released)', '' skip 1 using 1:(1000*$8) with lines lw 3 lc rgb '#2ca02c' title 'balls 2, 3, 4 (overlapping: they drift together)', '' skip 1 using 1:(1000*($14-0.101)) with lines lw 2 lc rgb '#1f77b4' title 'ball 5'");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/newtons_cradle-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/newtons_cradle-draw.dslb;
 assert(r.code == 0);
 println("wrote images/newtons_cradle.png");
 
-render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+render = _lmcode_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
 let steel = scene.material(0.85, 0.86, 0.88, 1.0, 0.12, 0.0, 0.0, 0.0, 0.0, 0.0);
 let wood = scene.material(0.36, 0.2, 0.09, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0);
 let chrome = scene.material(0.7, 0.7, 0.72, 1.0, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -103,7 +103,7 @@ scene.camera_look_at(0.22, -0.95, 0.34, 0.0, 0.0, 0.11, 30.0);
 scene.set_view_transform("AgX");
 scene.render_settings(6, 17, true);
 scene.render_png("images/newtons_cradle_render.png", 48, 900, 600);
-end _dsl_
+end _lmcode_
 savedsl(render, "build/newtons_cradle-render.dslb");
 argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/newtons_cradle-render.dslb");
 r = system(argv, 300000);

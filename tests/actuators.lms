@@ -1,6 +1,6 @@
 # Drag, off-centre springs, linear and torque motors, gears, universal and cylindrical joints.
 out = ARGV.len() > 0 ? ARGV[0] : "build/actuators.dslb";
-p = _dsl_ cli="lmphysics";
+p = _lmcode_ cli="lmphysics";
 # Quadratic drag: terminal speed sqrt(m g / c2) = sqrt(9.81 / 0.1) for a 1 kg ball.
 let a = phys.system("nsc");
 a.integrator("trapezoidal").timestep(0.001);
@@ -108,5 +108,5 @@ v.run(1.0);
 phys.assert_close(collar.z(), -9.81 / 2.0, 0.001);
 phys.assert_close(collar.wz(), 3.0, 0.0001);
 phys.assert_close(cj.travel(), -9.81 / 2.0, 0.001);
-end _dsl_
+end _lmcode_
 savedsl(p, out);

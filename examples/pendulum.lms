@@ -3,7 +3,7 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/pendulum.dslb";
 mkdir("build/examples");
 mkdir("images");
-p = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+p = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.integrator("hht").timestep(0.0005);
 let pin = s.ground("pin");
@@ -15,12 +15,12 @@ s.run(5.0);
 phys.assert_close(s.energy() / e0, 1.0, 0.0001);
 phys.assert_close(bob.x() * bob.x() + bob.z() * bob.z(), 1.0, 0.001);
 s.save_csv("build/examples/pendulum.csv");
-end _dsl_
+end _lmcode_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/pendulum.png", 900, 520);
 plot.cmd("set datafile separator ','");
 plot.cmd("set title 'Revolute pendulum released at 60 degrees: joint angle and pin reaction force'");
@@ -33,7 +33,7 @@ plot.cmd("set ytics nomirror");
 plot.cmd("set key top right box opaque");
 plot.cmd("plot 'build/examples/pendulum.csv' skip 1 using 1:6 with lines lw 2 lc rgb '#1f77b4' title 'angle (left)', 'build/examples/pendulum.csv' skip 1 using 1:8 axes x1y2 with lines lw 2 lc rgb '#d62728' title 'pin force fz (right)'");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/pendulum-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/pendulum-draw.dslb;
 assert(r.code == 0);

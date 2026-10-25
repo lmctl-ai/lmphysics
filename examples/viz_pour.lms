@@ -4,7 +4,7 @@
 # Output: images/pour.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.material("glass", 0.3, 0.1).timestep(0.004).solver("apgd", 30).record_every(250);
 s.floor("floor", "glass");
@@ -21,7 +21,7 @@ for (k in range(0, 40)) {
 }
 s.run(2.5);
 s.save_csv("build/examples/pour.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_pour-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_pour-sim.dslb;
 assert(r.code == 0);
@@ -39,7 +39,7 @@ for (k in range(0, 40)) {
 }
 write_file("build/examples/pour_keys.csv", kf);
 
-draw = _dsl_ cli="lmcad" install="github:lmctl-ai/lmcad@latest";
+draw = _lmcode_ cli="lmcad" install="github:lmctl-ai/lmcad@latest";
 let keys = read_keyframes_csv("build/examples/pour_keys.csv");
 scene.background(0.06, 0.07, 0.10);
 let slab = material().color(0.55, 0.58, 0.62).roughness(0.8);
@@ -59,7 +59,7 @@ scene.fill_light(0.8, -0.2, 0.9, 0.35);
 scene.ambient(0.22);
 scene.supersample(2);
 scene.render_png("images/pour.png", 900, 600);
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/viz_pour-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/viz_pour-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

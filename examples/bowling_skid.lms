@@ -6,7 +6,7 @@
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let r = 0.108;
 let mu = 0.2;
 let g = 9.81;
@@ -22,7 +22,7 @@ w.run(2.5);
 phys.assert_close(ball.vx(), 5.0 / 7.0 * v0, 0.02);
 phys.assert_close(ball.wy() * r, 5.0 / 7.0 * v0, 0.02);
 w.save_csv("build/examples/bowling_skid.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/bowling_skid-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/bowling_skid-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -61,7 +61,7 @@ lab2 = sprintf("v = 5/7 v0 = %.2f m/s after %.1f m of skid", 5.0 / 7.0 * v0, x_r
 fr = sprintf("friction mu m g = %.1f N", mu * 7.0 * g);
 wt = sprintf("m g = %.1f N", 7.0 * g);
 
-d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 560, "#0f1720");
 scene.text(40.0, 44.0, 24.0, "Bowling ball: skid, then roll at 5/7 of the release speed", "#e6edf3").set_attr("font-weight", "700");
 scene.text(40.0, 72.0, 14.0, "7 kg ball released at 8 m/s with no spin, lane friction 0.2. Friction slows the ball and spins it up until v = w r.", "#9fb3c8");
@@ -100,7 +100,7 @@ yl.set_attr("transform", "rotate(-90 436 285)");
 scene.text(470.0, 520.0, 14.0, ${lab1}, "#ffd166");
 scene.text(470.0, 542.0, 14.0, ${lab2}, "#ffd166");
 scene.render_png("build/rendered/bowling_skid.png", 900, 560, 1);
-end _dsl_
+end _lmcode_
 savedsl(d, "build/bowling_skid-draw.dslb");
 r = system ${dsl_cli(d)} --dsl build/bowling_skid-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

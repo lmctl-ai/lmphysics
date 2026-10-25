@@ -9,7 +9,7 @@
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let ms = 300.0;
 let mu = 40.0;
 let ks = 20000.0;
@@ -34,7 +34,7 @@ for (k in range(0, 9)) {
   phys.assert_close(body.z(), 0.8, 0.005);
   s.save_csv("build/examples/quarter_car_" + str(k) + ".csv");
 }
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/quarter_car-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/quarter_car-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -66,7 +66,7 @@ assert(num(sw[0]["acc_peak"]) * 4.0 < num(sw[8]["acc_peak"]));
 assert(num(sw[0]["tyre_peak"]) < num(sw[8]["tyre_peak"]));
 assert(num(sw[0]["settle"]) > 3.0 * num(sw[8]["settle"]));
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/quarter_car.png", 1100, 500);
 plot.cmd("set datafile separator ','");
 plot.cmd("set multiplot layout 1,2");
@@ -92,7 +92,7 @@ plot.cmd("set key top center box opaque");
 plot.cmd("plot 'build/examples/quarter_car_sweep.csv' skip 1 using 1:2 with linespoints lw 3 pt 7 lc rgb '#9467bd' title 'body acceleration (comfort)', '' skip 1 using 1:5 axes x1y2 with linespoints lw 3 pt 5 lc rgb '#ff7f0e' title 'settling time (body control)'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/quarter_car-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/quarter_car-draw.dslb;
 assert(r.code == 0);
@@ -111,7 +111,7 @@ fn zigzag(x, y0, y1, n) {
 tyre = zigzag(250.0, 470.0, 390.0, 6);
 spring = zigzag(210.0, 310.0, 190.0, 8);
 
-d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 560, "#0f1720");
 scene.text(40.0, 44.0, 24.0, "The quarter-car model", "#e6edf3").set_attr("font-weight", "700");
 scene.text(40.0, 72.0, 14.0, "One corner of a car: two masses, two springs, one damper. lmphysics builds it from boxes, prismatic guides and spring_at.", "#9fb3c8");
@@ -134,7 +134,7 @@ scene.text(545.0, 234.0, 14.0, "Hard damping: the bump goes straight through,", 
 scene.text(545.0, 256.0, 14.0, "the body jolts and the tyre load jumps.", "#9fb3c8");
 scene.text(545.0, 278.0, 14.0, "Cars pick c near 0.3 of critical: about 1500 N s/m.", "#9fb3c8");
 scene.render_png("build/rendered/quarter_car_model.png", 900, 560, 1);
-end _dsl_
+end _lmcode_
 savedsl(d, "build/quarter_car-model.dslb");
 r = system ${dsl_cli(d)} --dsl build/quarter_car-model.dslb;
 if (r.code != 0) { println(r.stderr); }

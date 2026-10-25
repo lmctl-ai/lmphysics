@@ -5,7 +5,7 @@
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.integrator("hht").timestep(0.0002).record_every(50);
 let pin = s.ground("pin");
@@ -19,7 +19,7 @@ for (i in range(0, 12)) {
 }
 s.run(0.8);
 s.save_csv("build/examples/anim_chain_whip.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/anim_chain_whip-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/anim_chain_whip-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -45,7 +45,7 @@ for (k in range(0, rows.len())) {
   sp = sqrt(num(row["l11.vx"]) * num(row["l11.vx"]) + num(row["l11.vz"]) * num(row["l11.vz"]));
   label = sprintf("t = %.2f s     tip speed %.1f m/s", num(row["t"]), sp);
   frame = "build/rendered/chain" + sprintf("%03d", k) + ".png";
-  d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+  d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
   scene.canvas(600, 540, "#0f1720");
   scene.text(24.0, 34.0, 18.0, "Chain whip: twelve hinged links (lmphysics, HHT)", "#e6edf3");
   scene.text(24.0, 58.0, 14.0, ${label}, "#ffd166");
@@ -55,7 +55,7 @@ for (k in range(0, rows.len())) {
   scene.circle(180.0, 110.0, 5.0, "#e6edf3");
   scene.circle(float(${txi}), float(${tzi}), 7.0, "#ff6b6b");
   scene.render_png(${frame}, 600, 540, 1);
-end _dsl_
+end _lmcode_
   savedsl(d, "build/chain_frame.dslb");
   r = system ${dsl_cli(d)} --dsl build/chain_frame.dslb;
   assert(r.code == 0);

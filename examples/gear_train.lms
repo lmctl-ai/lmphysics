@@ -9,7 +9,7 @@ import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").solver("psor", 200).timestep(0.0002).record_every(50);
 let frame = s.ground("frame");
@@ -33,7 +33,7 @@ phys.assert_close(wheel.wz(), 40.0, 0.05);
 phys.assert_close(drive.effort(), 0.5, 0.01);
 phys.assert_close(a2.angle() / drive.angle(), 0.25, 0.001);
 s.save_csv("build/examples/gear_train.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/gear_train-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/gear_train-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -82,7 +82,7 @@ m1 = spoke(150.0, 300.0, 40.0, th1);
 m2 = spoke(270.0, 300.0, 80.0, th2 + 3.141592653589793 / 20.0);
 m3 = spoke(510.0, 300.0, 160.0, th3);
 
-d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 620, "#0f1720");
 scene.text(40.0, 44.0, 24.0, "Gear train: 4 times slower, 4 times the torque", "#e6edf3").set_attr("font-weight", "700");
 scene.text(40.0, 72.0, 14.0, "10, 20 and 40 teeth after 1 s; the white spokes show the angle each gear turned in lmphysics.", "#9fb3c8");
@@ -104,7 +104,7 @@ scene.text(40.0, 556.0, 15.0, ${txt3}, "#9fc6ff");
 scene.text(40.0, 584.0, 14.0, ${txt4}, "#e6edf3");
 scene.text(40.0, 606.0, 14.0, ${txt5}, "#9fb3c8");
 scene.render_png("build/rendered/gear_train.png", 900, 620, 1);
-end _dsl_
+end _lmcode_
 savedsl(d, "build/gear_train-draw.dslb");
 r = system ${dsl_cli(d)} --dsl build/gear_train-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

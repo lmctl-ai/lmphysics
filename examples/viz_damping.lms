@@ -3,7 +3,7 @@
 # Output: images/damping.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let d1 = phys.system("nsc");
 d1.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
 let wall_d1 = d1.ground("wall");
@@ -40,12 +40,12 @@ d4.spring("sp", wall_d4, m_d4, 100.0, 40.0, 0.0);
 d4.record("m", "x");
 d4.run(2.0);
 d4.save_csv("build/examples/damping_d4.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_damping-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_damping-sim.dslb;
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/damping.png", 900, 520);
 plot.cmd("set datafile separator ','");
 plot.cmd("set title 'Mass-spring-damper: simulation (solid) vs closed form (dashed)'");
@@ -57,7 +57,7 @@ plot.cmd("w0 = 10.0");
 plot.cmd("xs(z,t) = z < 1 ? exp(-z*w0*t)*(cos(w0*sqrt(1-z*z)*t) + z/sqrt(1-z*z)*sin(w0*sqrt(1-z*z)*t)) : (z == 1 ? exp(-w0*t)*(1+w0*t) : (-w0*(z+sqrt(z*z-1))*exp(-w0*(z-sqrt(z*z-1))*t) + w0*(z-sqrt(z*z-1))*exp(-w0*(z+sqrt(z*z-1))*t)) / (-2*w0*sqrt(z*z-1)))");
 plot.cmd("plot 'build/examples/damping_d1.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#1f77b4' title 'zeta = 0.1', 'build/examples/damping_d2.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#2ca02c' title 'zeta = 0.5', 'build/examples/damping_d3.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#ff7f0e' title 'zeta = 1.0', 'build/examples/damping_d4.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#d62728' title 'zeta = 2.0', xs(0.1,x) with lines dt 2 lw 1 lc rgb 'black' notitle, xs(0.5,x) with lines dt 2 lw 1 lc rgb 'black' notitle, xs(1.0,x) with lines dt 2 lw 1 lc rgb 'black' notitle, xs(2.0,x) with lines dt 2 lw 1 lc rgb 'black' notitle");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/viz_damping-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/viz_damping-draw.dslb;
 assert(r.code == 0);

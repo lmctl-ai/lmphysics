@@ -6,7 +6,7 @@
 # Output: images/cardan_joint.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 for (k in range(0, 3)) {
   let b = 0.2617993877991494 * float(k + 1);
   let cb = cos(b);
@@ -27,7 +27,7 @@ for (k in range(0, 3)) {
   s.run(3.5);
   s.save_csv("build/examples/cardan_" + str(k) + ".csv");
 }
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/cardan_joint-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/cardan_joint-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -50,7 +50,7 @@ for (k in range(0, 3)) {
   assert(abs(hi - 2.0 / cbs[k]) < 0.02 && abs(lo - 2.0 * cbs[k]) < 0.02);
 }
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/cardan_joint.png", 900, 520);
 plot.cmd("set datafile separator ','");
 plot.cmd("set title 'One universal joint: output speed for a steady 2 rad/s input (lines lmphysics, dots closed form)'");
@@ -64,7 +64,7 @@ plot.cmd("f(th, b) = 2*cos(b) / (1 - sin(b)**2 * sin(th)**2)");
 plot.cmd("set samples 41");
 plot.cmd("plot 'build/examples/cardan_w0.csv' skip 2 using ($1*2/(2*pi)):2 with lines lw 3 lc rgb '#1f77b4' title '15 deg', 'build/examples/cardan_w1.csv' skip 2 using ($1*2/(2*pi)):2 with lines lw 3 lc rgb '#2ca02c' title '30 deg', 'build/examples/cardan_w2.csv' skip 2 using ($1*2/(2*pi)):2 with lines lw 3 lc rgb '#d62728' title '45 deg', f(2*pi*x, pi/12) with points pt 7 ps 0.7 lc rgb '#000000' notitle, f(2*pi*x, pi/6) with points pt 7 ps 0.7 lc rgb '#000000' notitle, f(2*pi*x, pi/4) with points pt 7 ps 0.7 lc rgb '#000000' notitle");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/cardan_joint-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/cardan_joint-draw.dslb;
 assert(r.code == 0);

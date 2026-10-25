@@ -5,7 +5,7 @@
 # Output: images/resonance.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 for (k in range(0, 49)) {
   let w = 4.0 + 0.25 * float(k);
   let s = phys.system("nsc");
@@ -59,13 +59,13 @@ c.spring("k", wall_c, car_c, 100.0, 4.0, 0.0);
 c.record("car", "x");
 c.run(4.0);
 c.save_csv("build/examples/resonance_w14.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_resonance-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_resonance-sim.dslb;
 assert(r.code == 0);
 write_file("build/examples/resonance_curve.txt", r.stdout);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/resonance.png", 1100, 480);
 plot.cmd("set multiplot layout 1,2");
 plot.cmd("set title 'Resonance curve (damping ratio 0.2)'");
@@ -84,7 +84,7 @@ plot.cmd("set key top right box opaque");
 plot.cmd("plot 'build/examples/resonance_w6.csv' skip 1 using 1:2 with lines lw 2 lc rgb '#1f77b4' title 'w = 6 (below)', 'build/examples/resonance_w10.csv' skip 1 using 1:2 with lines lw 2 lc rgb '#d62728' title 'w = 10 (resonance)', 'build/examples/resonance_w14.csv' skip 1 using 1:2 with lines lw 2 lc rgb '#2ca02c' title 'w = 14 (above)'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/viz_resonance-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/viz_resonance-draw.dslb;
 assert(r.code == 0);

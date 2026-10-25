@@ -5,7 +5,7 @@
 # Output: images/projectile.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let p1 = phys.system("nsc");
 p1.integrator("trapezoidal").timestep(0.001);
 let ball_p1 = p1.sphere("ball", 0.05, 800.0).vel(20.0 * cos(15.0 * 0.017453292519943295), 0.0, 20.0 * sin(15.0 * 0.017453292519943295));
@@ -63,13 +63,13 @@ for (k in range(0, 44)) {
   let landing = xprev + (shot.x() - xprev) * zprev / (zprev - shot.z());
   phys.print(str(deg) + " " + str(landing));
 }
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_projectile-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_projectile-sim.dslb;
 assert(r.code == 0);
 write_file("build/examples/projectile_range.txt", r.stdout);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/projectile.png", 1100, 480);
 plot.cmd("set multiplot layout 1,2");
 plot.cmd("set datafile separator ','");
@@ -91,7 +91,7 @@ plot.cmd("set key bottom center box opaque");
 plot.cmd("plot 400.0*sin(2*x*pi/180)/9.81 with lines lw 3 lc rgb '#bbbbbb' title 'v^2 sin(2 theta) / g', 'build/examples/projectile_range.txt' every ::0::43 using 1:2 with points pt 7 ps 1 lc rgb '#d62728' title 'lmphysics'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/viz_projectile-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/viz_projectile-draw.dslb;
 assert(r.code == 0);

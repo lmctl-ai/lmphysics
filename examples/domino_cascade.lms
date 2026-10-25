@@ -7,7 +7,7 @@
 import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536a04b8d4448162c4a229d6/examples/bridge/pose_obj.lms";
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let h = 0.2;
 for (k in range(0, 5)) {
   let d = h * (0.3 + 0.125 * float(k));
@@ -24,7 +24,7 @@ for (k in range(0, 5)) {
   s.run(3.0);
   s.save_csv("build/examples/domino_" + str(k) + ".csv");
 }
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/domino_cascade-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/domino_cascade-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -60,7 +60,7 @@ for (i in range(0, 16)) {
 write_file("build/examples/domino_times.csv", times);
 write_file("build/examples/domino_speeds.csv", speeds);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/domino_cascade.png", 1100, 480);
 plot.cmd("set datafile separator ','");
 plot.cmd("set multiplot layout 1,2");
@@ -79,7 +79,7 @@ plot.cmd("unset key");
 plot.cmd("plot 'build/examples/domino_speeds.csv' skip 1 using 1:2 with linespoints lw 3 pt 7 ps 1.4 lc rgb '#d62728'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/domino_cascade-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/domino_cascade-draw.dslb;
 assert(r.code == 0);
@@ -91,7 +91,7 @@ frame = rows[0];
 for (row in rows) { if (num(row["t"]) <= tab[2][8] - 0.03) { frame = row; } }
 for (i in range(0, 16)) { pose_box_obj(frame, "d" + str(i), 0.03, 0.1, 0.2, "build/examples/domino_r" + str(i) + ".obj"); }
 
-render = _dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+render = _lmcode_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
 let ivory = scene.material(0.9, 0.87, 0.8, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0);
 let black = scene.material(0.02, 0.02, 0.025, 0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0);
 for (i in range(0, 16)) {
@@ -106,7 +106,7 @@ scene.camera_look_at(-0.45, -1.35, 0.55, 0.72, 0.0, 0.04, 34.0);
 scene.set_view_transform("AgX");
 scene.render_settings(6, 17, true);
 scene.render_png("images/domino_cascade_render.png", 48, 900, 520);
-end _dsl_
+end _lmcode_
 savedsl(render, "build/domino_cascade-render.dslb");
 argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/domino_cascade-render.dslb");
 r = system(argv, 300000);

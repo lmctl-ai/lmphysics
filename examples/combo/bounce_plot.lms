@@ -2,7 +2,7 @@
 # Needs lmplot on PATH or installable; the PNG lands in images/bounce.png.
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.material("rubber", 0.3, 0.8).timestep(0.001).collision_margins(0.0, 0.0);
 s.floor("floor", "rubber");
@@ -10,12 +10,12 @@ let ball = s.sphere("ball", 0.1, 500.0).pos(0.0, 0.0, 2.1).vel(1.5, 0.0, 0.0).co
 s.record("ball", "x,z");
 s.run(4.0);
 s.save_csv("build/examples/bounce.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/bounce-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/bounce-sim.dslb;
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/bounce.png", 900, 500);
 plot.cmd("set title 'Bouncing ball, restitution 0.8 (lmphysics / Chrono, drawn by lmplot)'");
 plot.cmd("set datafile separator ','");
@@ -25,7 +25,7 @@ plot.cmd("set ylabel 'height [m]'");
 plot.cmd("unset key");
 plot.cmd("plot 'build/examples/bounce.csv' using 2:3 with lines lw 2 lc rgb '#1f77b4'");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/bounce-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/bounce-draw.dslb;
 assert(r.code == 0);

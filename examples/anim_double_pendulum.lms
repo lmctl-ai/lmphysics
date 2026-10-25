@@ -5,7 +5,7 @@
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let a = phys.system("nsc");
 a.integrator("hht").timestep(0.001);
 let pin = a.ground("pin");
@@ -18,7 +18,7 @@ let e0 = a.energy();
 a.run(6.0);
 phys.assert_close(a.energy() / e0, 1.0, 0.001);
 a.save_csv("build/examples/anim_dpend.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/anim_double_pendulum-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/anim_double_pendulum-sim.dslb;
 assert(r.code == 0);
@@ -35,7 +35,7 @@ for (k in range(0, nframes)) {
   trail = trail + sprintf("%.1f,%.1f ", x2, y2);
   tlabel = sprintf("t = %.2f s", m.get("t", 0.0));
   frame = "build/rendered/f" + sprintf("%03d", k) + ".png";
-  d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+  d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
   scene.canvas(600, 430, "#0f1720");
   scene.text(24.0, 34.0, 18.0, "Double pendulum (lmphysics / Chrono, HHT)", "#e6edf3");
   scene.text(24.0, 58.0, 13.0, ${tlabel}, "#9fb3c8");
@@ -46,7 +46,7 @@ for (k in range(0, nframes)) {
   scene.circle(${x1}, ${y1}, 11.0, "#4fa3ff");
   scene.circle(${x2}, ${y2}, 11.0, "#ff6b6b");
   scene.render_png(${frame}, 600, 430, 1);
-end _dsl_
+end _lmcode_
   savedsl(d, "build/frame.dslb");
   r = system ${dsl_cli(d)} --dsl build/frame.dslb;
   assert(r.code == 0);

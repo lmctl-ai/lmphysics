@@ -7,7 +7,7 @@
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let r = 0.0285;
 for (k in range(0, 5)) {
   let b = 2.0 * r * (0.15 + 0.175 * float(k));
@@ -24,7 +24,7 @@ for (k in range(0, 5)) {
   phys.assert_close(obj.vy() / sqrt(obj.vx() * obj.vx() + obj.vy() * obj.vy()), -b / (2.0 * r), 0.005);
   s.save_csv("build/examples/billiards_" + str(k) + ".csv");
 }
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/billiards_90-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/billiards_90-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -61,7 +61,7 @@ println(tbl);
 gx = px(-sqrt(4.0 * 0.0285 * 0.0285 - 0.0285 * 0.0285));
 gy = py(0.0285);
 
-d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 640, "#0d3b2e");
 scene.text(40.0, 44.0, 24.0, "Billiards: equal balls always part at 90 degrees", "#f1f5ef").set_attr("font-weight", "700");
 scene.text(40.0, 72.0, 14.0, "Cue ball from the left at 2 m/s, five offsets b. Dashed: cue ball; solid: object ball. Simulated by lmphysics.", "#bfe3cf");
@@ -86,7 +86,7 @@ scene.text(40.0, 566.0, 14.0, ${l3}, "#4fa3ff");
 scene.text(40.0, 588.0, 14.0, ${l4}, "#c792ea");
 scene.text(40.0, 616.0, 13.0, "cos = 0 means a right angle; the two speeds are v cos(cut) and v sin(cut), so kinetic energy is kept.", "#bfe3cf");
 scene.render_png("build/rendered/billiards_90.png", 900, 640, 1);
-end _dsl_
+end _lmcode_
 savedsl(d, "build/billiards_90-draw.dslb");
 r = system ${dsl_cli(d)} --dsl build/billiards_90-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

@@ -3,7 +3,7 @@
 # Pin the shared module so raw-URL autorun works from an empty directory.
 import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/379bdafd4ba99c4af432fbbc334b5306e5de9a39/examples/bridge/pose_obj.lms";
 mkdir("build/examples"); mkdir("images");
-sim=_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim=_lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s=phys.system("nsc"); s.integrator("hht").timestep(0.001).record_every(50);
 let ground=s.ground("pin");
 let angle=0.7; let l=0.9; let top=3.2;
@@ -16,7 +16,7 @@ s.revolute("hinge_c",b,c,2.0*l*sin(angle),0.0,top-2.0*l*cos(angle),0.0,1.0,0.0);
 s.record("a","x,y,z,qw,qx,qy,qz").record("b","x,y,z,qw,qx,qy,qz").record("c","x,y,z,qw,qx,qy,qz");
 let energy=s.energy(); s.run(0.55); phys.assert_close(s.energy()/energy,1.0,0.001);
 s.save_csv("build/examples/chain_poses.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim,"build/blender_pendulum_chain-sim.dslb");
 r=system ${dsl_cli(sim)} --dsl build/blender_pendulum_chain-sim.dslb;
 if (r.code!=0) { println(r.stdout); println(r.stderr); } assert(r.code==0);
@@ -34,7 +34,7 @@ for (k in range(0,3)) {
 }
 # Joint centers are measured endpoints, then captured as numeric literals in the render block.
 j1=ends[1]; j2=ends[3];
-draw=_dsl_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
+draw=_lmcode_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
 let brass=scene.material(0.8,0.51,0.15,0.7,0.25,0.0,0.0,0.0,0.0,0.0);
 let blue=scene.material(0.07,0.28,0.42,0.25,0.3,0.0,0.0,0.0,0.0,0.0);
 let red=scene.material(0.7,0.15,0.045,0.15,0.32,0.0,0.0,0.0,0.0,0.0);
@@ -54,7 +54,7 @@ scene.world_color(0.7,0.8,1.0,0.25);
 scene.set_view_transform("AgX");
 scene.render_settings(6,17,true);
 scene.render_png("images/blender_pendulum_chain.png",32,800,700);
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/blender_pendulum_chain-draw.dslb");
 argv=dsl_cli(draw); push(argv,"--dsl"); push(argv,"build/blender_pendulum_chain-draw.dslb");
 r=system(argv,300000);

@@ -6,7 +6,7 @@
 # Output: images/coupled_pendulums.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let s = phys.system("nsc");
 s.integrator("hht").timestep(0.001).record_every(10);
 let top = s.ground("top");
@@ -25,7 +25,7 @@ let e0 = s.energy();
 s.run(22.0);
 phys.assert_close(s.energy() - e0, 0.0, 0.00001);
 s.save_csv("build/examples/coupled_pendulums.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/coupled_pendulums-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/coupled_pendulums-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
@@ -55,7 +55,7 @@ write_file("build/examples/coupled_energy.csv", out);
 println(sprintf("energy reaches the second pendulum after %.2f s (pi / (w2 - w1) = %.2f s), %.0f%% of it", t_max, t_swap, 100.0 * eb_max / e_ref));
 assert(abs(t_max - t_swap) < 0.3 && eb_max / e_ref > 0.9);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/coupled_pendulums.png", 900, 640);
 plot.cmd("set datafile separator ','");
 plot.cmd("set multiplot layout 2,1");
@@ -75,7 +75,7 @@ plot.cmd("set label 1 'pi / (w2 - w1) = 5.4 s' at 5.6,1.1");
 plot.cmd("plot 'build/examples/coupled_energy.csv' skip 1 using 1:4 with lines lw 2.5 lc rgb '#d62728' title 'pendulum A', '' skip 1 using 1:5 with lines lw 2.5 lc rgb '#1f77b4' title 'pendulum B'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/coupled_pendulums-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/coupled_pendulums-draw.dslb;
 assert(r.code == 0);

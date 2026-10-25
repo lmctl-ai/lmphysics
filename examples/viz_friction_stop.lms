@@ -7,7 +7,7 @@
 # Output: images/friction_stop.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 for (k in range(0, 40)) {
   let mu = 0.05 + 0.02 * float(k);
   let w = phys.system("nsc");
@@ -46,13 +46,13 @@ let c3 = s3.box("blk", 0.4, 0.4, 0.2, 125.0).pos(0.0, 0.0, 0.112).vel(6.4, 0.0, 
 s3.record("blk", "x,vx");
 s3.run(6.0);
 s3.save_csv("build/examples/friction_mu060.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_friction_stop-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_friction_stop-sim.dslb;
 assert(r.code == 0);
 write_file("build/examples/friction_stop.txt", r.stdout);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/friction_stop.png", 1100, 480);
 plot.cmd("set multiplot layout 1,2");
 plot.cmd("set title 'Sliding distance after landing at 6.4 m/s'");
@@ -72,7 +72,7 @@ plot.cmd("set key top right box opaque");
 plot.cmd("plot 'build/examples/friction_mu010.csv' skip 1 using 1:3 with lines lw 2 lc rgb '#1f77b4' title 'mu = 0.1', 'build/examples/friction_mu030.csv' skip 1 using 1:3 with lines lw 2 lc rgb '#2ca02c' title 'mu = 0.3', 'build/examples/friction_mu060.csv' skip 1 using 1:3 with lines lw 2 lc rgb '#d62728' title 'mu = 0.6'");
 plot.cmd("unset multiplot");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/viz_friction_stop-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/viz_friction_stop-draw.dslb;
 assert(r.code == 0);

@@ -3,7 +3,7 @@
 # Output: images/energy_drift.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let e = phys.system("nsc");
 e.integrator("euler").timestep(0.0005);
 let pin_e = e.ground("pin");
@@ -28,12 +28,12 @@ h.revolute("hinge", pin_h, bob_h, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 h.record("bob", "z,vx,vz,wy");
 h.run(10.0);
 h.save_csv("build/examples/drift_hht.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_energy_drift-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_energy_drift-sim.dslb;
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/energy_drift.png", 900, 520);
 plot.cmd("set datafile separator ','");
 plot.cmd("set title 'Energy error of a pendulum on a revolute joint, dt = 0.5 ms'");
@@ -46,7 +46,7 @@ plot.cmd("en(vx,vz,wy,z) = 0.5*m*(vx*vx+vz*vz) + 0.5*ib*wy*wy + m*g*z");
 plot.cmd("e0 = en(0,0,0,-0.5)");
 plot.cmd("plot 'build/examples/drift_euler.csv' skip 1 using 1:((en($3,$4,$5,$2)-e0)/(m*g)) with lines lw 2 lc rgb '#d62728' title 'implicit Euler (default)', 'build/examples/drift_trapezoidal.csv' skip 1 using 1:((en($3,$4,$5,$2)-e0)/(m*g)) with lines lw 2 lc rgb '#ff7f0e' title 'trapezoidal', 'build/examples/drift_hht.csv' skip 1 using 1:((en($3,$4,$5,$2)-e0)/(m*g)) with lines lw 2 lc rgb '#1f77b4' title 'HHT (direct solver)'");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/viz_energy_drift-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/viz_energy_drift-draw.dslb;
 assert(r.code == 0);

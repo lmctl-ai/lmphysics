@@ -6,7 +6,7 @@
 # Output: images/rolling_race.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let th = 0.2617993877991494;
 let g = 9.81;
 let w = phys.system("nsc");
@@ -36,14 +36,14 @@ phys.assert_close((shell.x() - x0) / cos(th), s / (5.0 / 3.0), 0.03);
 phys.assert_close((disc.x() - x0) / cos(th), s / 1.5, 0.03);
 phys.assert_close((hoop.x() - x0) / cos(th), s / 2.0, 0.03);
 w.save_csv("build/examples/rolling_race.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/rolling_race-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/rolling_race-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
 # Distance along the slope from the start, for each body: (x - x0) / cos(theta).
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/rolling_race.png", 900, 560);
 plot.cmd("set datafile separator ','");
 plot.cmd("set title 'Race down a 15 degree ramp: same mass and radius, different inertia (lines: lmphysics, circles: closed form)'");
@@ -59,7 +59,7 @@ plot.cmd("x0 = -10*c + 0.3*s");
 plot.cmd("set termoption noenhanced");
 plot.cmd("plot 'build/examples/rolling_race.csv' skip 1 using 1:(($2 - x0)/c) with lines lw 3 lc rgb '#7f7f7f' title 'frictionless block: a = g sin(theta)', 'build/examples/rolling_race.csv' skip 1 using 1:(($3 - x0)/c) with lines lw 3 lc rgb '#d62728' title 'solid ball, I = 2/5 m r^2: a is 5/7 of that', 'build/examples/rolling_race.csv' skip 1 using 1:(($5 - x0)/c) with lines lw 3 lc rgb '#1f77b4' title 'solid cylinder, I = 1/2 m r^2: 2/3', 'build/examples/rolling_race.csv' skip 1 using 1:(($4 - x0)/c) with lines lw 3 lc rgb '#9467bd' title 'hollow ball, I = 2/3 m r^2: 3/5', 'build/examples/rolling_race.csv' skip 1 using 1:(($6 - x0)/c) with lines lw 3 lc rgb '#2ca02c' title 'thin hoop, I = m r^2: 1/2', 1*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' title 'closed form s = a t^2 / 2', 5./7*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' notitle, 2./3*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' notitle, 3./5*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' notitle, 1./2*g*s*x*x/2 with points pt 6 ps 1.1 lw 1.5 lc rgb '#000000' notitle");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/rolling_race-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/rolling_race-draw.dslb;
 assert(r.code == 0);

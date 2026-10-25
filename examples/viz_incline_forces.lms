@@ -6,7 +6,7 @@
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let th = 0.5235987755982988;
 let w = phys.system("nsc");
 w.material("m", 0.3, 0.0).timestep(0.001);
@@ -17,7 +17,7 @@ w.record("blk", "vx,vz");
 w.run(1.4);
 phys.assert_close(blk.vx() * cos(th) - blk.vz() * sin(th), 9.81 * (sin(th) - 0.3 * cos(th)) * 1.4, 0.05);
 w.save_csv("build/examples/incline_forces.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_incline_forces-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_incline_forces-sim.dslb;
 assert(r.code == 0);
@@ -68,7 +68,7 @@ t4 = sprintf("m g sin 30 = %.1f N", down);
 t5 = sprintf("net %.1f N: a = %.2f m/s2", net, acc);
 t6 = sprintf("closed form g (sin 30 - mu cos 30) = %.2f m/s2", net / m);
 
-d = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+d = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 650, "#0f1720");
 scene.text(40.0, 44.0, 24.0, "Block on a 30 degree ramp: the forces, measured", "#e6edf3").set_attr("font-weight", "700");
 scene.text(40.0, 72.0, 14.0, "4 kg, friction coefficient 0.3. Arrow lengths are to scale; the acceleration is measured in the simulation.", "#9fb3c8");
@@ -87,7 +87,7 @@ scene.text(56.0, 588.0, 16.0, ${t5}, "#e6edf3").set_attr("font-weight", "700");
 scene.text(56.0, 612.0, 13.0, ${t6}, "#9fb3c8");
 scene.text(140.0, 508.0, 16.0, "30 deg", "#9fb3c8");
 scene.render_png("build/rendered/incline_forces.png", 900, 650, 1);
-end _dsl_
+end _lmcode_
 savedsl(d, "build/viz_incline_forces-draw.dslb");
 r = system ${dsl_cli(d)} --dsl build/viz_incline_forces-draw.dslb;
 if (r.code != 0) { println(r.stderr); }

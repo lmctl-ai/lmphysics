@@ -1,6 +1,6 @@
 # Closed-form checks without contact: free fall, projectile, spring-mass-damper, energy, motors, torque-free rotation.
 out = ARGV.len() > 0 ? ARGV[0] : "build/dynamics.dslb";
-p = _dsl_ cli="lmphysics";
+p = _lmcode_ cli="lmphysics";
 # Free fall z = z0 - g t^2/2. Trapezoidal is exact for a constant acceleration; implicit Euler lags by g*dt*t/2.
 let a = phys.system("nsc");
 a.integrator("trapezoidal").timestep(0.001);
@@ -87,5 +87,5 @@ let l1 = sqrt(top3.lx() * top3.lx() + top3.ly() * top3.ly() + top3.lz() * top3.l
 phys.assert_close(l1 / l0, 1.0, 0.000001);
 phys.assert_close(top3.ke() / ke0, 1.0, 0.000001);
 phys.assert_close(top3.vx(), 0.0, 0.0000001);
-end _dsl_
+end _lmcode_
 savedsl(p, out);

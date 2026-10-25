@@ -4,7 +4,7 @@
 # Output: images/restitution.png   (run: lmctl autorun <raw url of this file>)
 mkdir("build/examples");
 mkdir("images");
-sim = _dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
 let r1 = phys.system("nsc");
 r1.material("ball", 0.3, 0.9).timestep(0.0005).collision_margins(0.0, 0.0);
 r1.floor("floor", "ball");
@@ -33,12 +33,12 @@ let b_r4 = r4.sphere("ball", 0.05, 800.0).pos(0.0, 0.0, 1.05).collide("ball");
 r4.record("ball", "z");
 r4.run(3.0);
 r4.save_csv("build/examples/restitution_r4.csv");
-end _dsl_
+end _lmcode_
 savedsl(sim, "build/viz_restitution-sim.dslb");
 r = system ${dsl_cli(sim)} --dsl build/viz_restitution-sim.dslb;
 assert(r.code == 0);
 
-draw = _dsl_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
+draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/restitution.png", 900, 520);
 plot.cmd("set datafile separator ','");
 plot.cmd("set title 'Bouncing ball for four coefficients of restitution'");
@@ -49,7 +49,7 @@ plot.cmd("set grid");
 plot.cmd("set key top right box opaque");
 plot.cmd("plot 'build/examples/restitution_r1.csv' skip 1 using 1:($2-0.05) with lines lw 2 lc rgb '#1f77b4' title 'e = 0.9', 'build/examples/restitution_r2.csv' skip 1 using 1:($2-0.05) with lines lw 2 lc rgb '#2ca02c' title 'e = 0.7', 'build/examples/restitution_r3.csv' skip 1 using 1:($2-0.05) with lines lw 2 lc rgb '#ff7f0e' title 'e = 0.5', 'build/examples/restitution_r4.csv' skip 1 using 1:($2-0.05) with lines lw 2 lc rgb '#d62728' title 'e = 0.3'");
 plot.close();
-end _dsl_
+end _lmcode_
 savedsl(draw, "build/viz_restitution-draw.dslb");
 r = system ${dsl_cli(draw)} --dsl build/viz_restitution-draw.dslb;
 assert(r.code == 0);

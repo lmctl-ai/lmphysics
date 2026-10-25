@@ -1,6 +1,6 @@
 # Applied forces and torques (expressions in t) and thinned recording.
 out = ARGV.len() > 0 ? ARGV[0] : "build/loads.dslb";
-p = _dsl_ cli="lmphysics";
+p = _lmcode_ cli="lmphysics";
 # Constant force F = 3 N on a 2 kg body in zero gravity: x = F t^2 / (2 m), v = F t / m.
 let a = phys.system("nsc");
 a.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.001);
@@ -44,5 +44,5 @@ e.record("ball", "z");
 e.run(1.0);
 phys.assert_close(ball.z(), 5.0 - 9.81 / 2.0, 0.01);
 e.save_csv("build/loads_thinned.csv");
-end _dsl_
+end _lmcode_
 savedsl(p, out);
