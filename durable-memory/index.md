@@ -19,3 +19,5 @@
 ## Releases
 Releases are cut automatically on push to `main` when CI workflows pass all platforms.
 
+
+Compiler >=0.2.420 resolves std from the pinned SDK bundle by default; host schema bytes remain host-only, with full and `--without-std` parity plus a standard-only runtime probe in `test.sh`.
