@@ -10,106 +10,106 @@
 
 | ![harmonic_overhang](docs/images/harmonic_overhang.png) | ![wrecking_ball](docs/images/wrecking_ball.png) |
 | --- | --- |
-| Book-stacking puzzle: six blocks reach 1.225 block lengths past the edge; 10% further and the top one falls.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/harmonic_overhang.lms` | A 400 kg wrecking ball hits a 15-crate pyramid at 6.26 m/s = sqrt(g L), as the energy says.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/wrecking_ball.lms` |
+| Book-stacking puzzle: six blocks reach 1.225 block lengths past the edge; 10% further and the top one falls.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/harmonic_overhang.lms` | A 400 kg wrecking ball hits a 15-crate pyramid at 6.26 m/s = sqrt(g L), as the energy says.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/wrecking_ball.lms` |
 
 | ![newtons_cradle](docs/images/newtons_cradle_render.png) | ![newtons_cradle](docs/images/newtons_cradle.png) |
 | --- | --- |
-| Newton's cradle at the right ball's first apex (92% of the release height).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/newtons_cradle.lms` | The same cradle over 6 s: with restitution 0.98 the middle balls slowly start to swing together.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/newtons_cradle.lms` |
+| Newton's cradle at the right ball's first apex (92% of the release height).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/newtons_cradle.lms` | The same cradle over 6 s: with restitution 0.98 the middle balls slowly start to swing together.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/newtons_cradle.lms` |
 
 | ![domino_cascade](docs/images/domino_cascade_render.png) | ![domino_cascade](docs/images/domino_cascade.png) |
 | --- | --- |
-| A domino row mid-cascade, rendered from the simulated poses.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/domino_cascade.lms` | The wave settles to about sqrt(g h); speed against spacing for five rows.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/domino_cascade.lms` |
+| A domino row mid-cascade, rendered from the simulated poses.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/domino_cascade.lms` | The wave settles to about sqrt(g h); speed against spacing for five rows.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/domino_cascade.lms` |
 
 | ![billiards_90](docs/images/billiards_90.png) | ![viz_restitution](docs/images/restitution.png) |
 | --- | --- |
-| Billiards: equal balls part at exactly 90 degrees for every cut (cos = 0.0000).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/billiards_90.lms` | A ball dropped for four coefficients of restitution: each apex is e squared times the last.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_restitution.lms` |
+| Billiards: equal balls part at exactly 90 degrees for every cut (cos = 0.0000).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/billiards_90.lms` | A ball dropped for four coefficients of restitution: each apex is e squared times the last.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_restitution.lms` |
 
 | ![bounce_plot](docs/images/bounce.png) | ![blender_brick_stack](docs/images/blender_brick_stack.png) |
 | --- | --- |
-| A ball bouncing along the floor: lmphysics simulates, lmplot draws, one script.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/combo/bounce_plot.lms` | Six falling bricks: initial, impact at 0.4 s, settled at 1.6 s.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/blender_brick_stack.lms` |
+| A ball bouncing along the floor: lmphysics simulates, lmplot draws, one script.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/combo/bounce_plot.lms` | Six falling bricks: initial, impact at 0.4 s, settled at 1.6 s.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/blender_brick_stack.lms` |
 
 | ![viz_pour](docs/images/pour.png) |  |
 | --- | --- |
-| Forty balls poured into a box and settled, rendered with lmcad.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_pour.lms` |  |
+| Forty balls poured into a box and settled, rendered with lmcad.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_pour.lms` |  |
 
 
 ### Rolling, sliding and friction
 
 | ![rolling_race](docs/images/rolling_race.png) | ![bowling_skid](docs/images/bowling_skid.png) |
 | --- | --- |
-| Race down a ramp: a = g sin / (1 + I/m r^2) gives 5/7, 2/3, 3/5 and 1/2 of the sliding block.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/rolling_race.lms` | Bowling ball: skids for 2 v0 / (7 mu g) = 1.165 s, then rolls at 5/7 v0; free-body diagram.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/bowling_skid.lms` |
+| Race down a ramp: a = g sin / (1 + I/m r^2) gives 5/7, 2/3, 3/5 and 1/2 of the sliding block.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/rolling_race.lms` | Bowling ball: skids for 2 v0 / (7 mu g) = 1.165 s, then rolls at 5/7 v0; free-body diagram.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/bowling_skid.lms` |
 
 | ![incline](docs/images/incline.png) | ![viz_incline_forces](docs/images/incline_forces.png) |
 | --- | --- |
-| A block on a 30 degree ramp: sliding at g (sin - mu cos), or sticking (NSC and SMC).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/incline.lms` | Free-body diagram of the sliding block with the forces measured in the simulation (lmdraw).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_incline_forces.lms` |
+| A block on a 30 degree ramp: sliding at g (sin - mu cos), or sticking (NSC and SMC).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/incline.lms` | Free-body diagram of the sliding block with the forces measured in the simulation (lmdraw).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_incline_forces.lms` |
 
 | ![viz_friction_stop](docs/images/friction_stop.png) |  |
 | --- | --- |
-| Sliding distance against friction coefficient, 40 simulations on the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_friction_stop.lms` |  |
+| Sliding distance against friction coefficient, 40 simulations on the closed form.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_friction_stop.lms` |  |
 
 
 ### Spinning bodies
 
 | ![gyroscope](docs/images/gyroscope_render.png) | ![gyroscope](docs/images/gyroscope.png) |
 | --- | --- |
-| Gyroscope: gravity's torque swings the spin sideways; the axle precesses instead of falling.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/gyroscope.lms` | Precession rate against m g d / (I w) for seven spins, and the nutation dip shrinking as 1/w^2.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/gyroscope.lms` |
+| Gyroscope: gravity's torque swings the spin sideways; the axle precesses instead of falling.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/gyroscope.lms` | Precession rate against m g d / (I w) for seven spins, and the nutation dip shrinking as 1/w^2.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/gyroscope.lms` |
 
 | ![tennis_racket](docs/images/tennis_racket_render.png) | ![tennis_racket](docs/images/tennis_racket.png) |
 | --- | --- |
-| Tennis-racket theorem: a spin about the middle axis turns over (white rod = spin axis).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/tennis_racket.lms` | The same plate spun about each axis: only the intermediate one flips, every 2.8 s.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/tennis_racket.lms` |
+| Tennis-racket theorem: a spin about the middle axis turns over (white rod = spin axis).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/tennis_racket.lms` | The same plate spun about each axis: only the intermediate one flips, every 2.8 s.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/tennis_racket.lms` |
 
 
 ### Pendulums, chains and oscillators
 
 | ![anim_chain_whip](docs/images/chain_whip.gif) | ![chain_whip](docs/images/chain_whip.png) |
 | --- | --- |
-| Chain whip: twelve hinged links released horizontal (needs ffmpeg).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/anim_chain_whip.lms` | The chain tip reaches 8.5 m/s, 1.7 times a stone falling the same height, with energy conserved.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/chain_whip.lms` |
+| Chain whip: twelve hinged links released horizontal (needs ffmpeg).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/anim_chain_whip.lms` | The chain tip reaches 8.5 m/s, 1.7 times a stone falling the same height, with energy conserved.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/chain_whip.lms` |
 
 | ![coupled_pendulums](docs/images/coupled_pendulums.png) | ![blender_pendulum_chain](docs/images/blender_pendulum_chain.png) |
 | --- | --- |
-| Coupled pendulums: the swing changes hands every pi / (w2 - w1) = 5.4 s.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/coupled_pendulums.lms` | Three linked pendulums at 0.55 s, with full simulated orientations (Cycles).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/blender_pendulum_chain.lms` |
+| Coupled pendulums: the swing changes hands every pi / (w2 - w1) = 5.4 s.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/coupled_pendulums.lms` | Three linked pendulums at 0.55 s, with full simulated orientations (Cycles).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/blender_pendulum_chain.lms` |
 
 | ![viz_double_pendulum](docs/images/double_pendulum.png) | ![anim_double_pendulum](docs/images/double_pendulum.gif) |
 | --- | --- |
-| Chaos: two double pendulums one micro-radian apart separate exponentially.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_double_pendulum.lms` | The same double pendulum, animated (needs ffmpeg).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/anim_double_pendulum.lms` |
+| Chaos: two double pendulums one micro-radian apart separate exponentially.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_double_pendulum.lms` | The same double pendulum, animated (needs ffmpeg).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/anim_double_pendulum.lms` |
 
 | ![viz_pendulum_phase](docs/images/pendulum_phase.png) | ![viz_energy_drift](docs/images/energy_drift.png) |
 | --- | --- |
-| Phase portrait of a pendulum on a joint: ellipses for small swings, the separatrix for large ones.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_pendulum_phase.lms` | Energy error of one pendulum under three Chrono integrators: HHT conserves it, trapezoidal bleeds it.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_energy_drift.lms` |
+| Phase portrait of a pendulum on a joint: ellipses for small swings, the separatrix for large ones.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_pendulum_phase.lms` | Energy error of one pendulum under three Chrono integrators: HHT conserves it, trapezoidal bleeds it.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_energy_drift.lms` |
 
 | ![pendulum](docs/images/pendulum.png) | ![viz_damping](docs/images/damping.png) |
 | --- | --- |
-| Revolute pendulum: joint angle and the reaction force at the pin.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/pendulum.lms` | Mass-spring-damper, four damping ratios, simulation on top of the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_damping.lms` |
+| Revolute pendulum: joint angle and the reaction force at the pin.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/pendulum.lms` | Mass-spring-damper, four damping ratios, simulation on top of the closed form.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_damping.lms` |
 
 | ![viz_resonance](docs/images/resonance.png) |  |
 | --- | --- |
-| Driven oscillator: simulated resonance curve and time histories (applied force).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_resonance.lms` |  |
+| Driven oscillator: simulated resonance curve and time histories (applied force).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_resonance.lms` |  |
 
 
 ### Mechanisms and machines
 
 | ![four_bar_linkage](docs/images/four_bar_linkage.png) | ![gear_train](docs/images/gear_train.png) |
 | --- | --- |
-| Crank-rocker four-bar linkage and its coupler curve; rocker limits match the law of cosines.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/four_bar_linkage.lms` | Gear train with an idler: 4 times slower, 4 times the torque, 80 W in = 80 W out.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/gear_train.lms` |
+| Crank-rocker four-bar linkage and its coupler curve; rocker limits match the law of cosines.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/four_bar_linkage.lms` | Gear train with an idler: 4 times slower, 4 times the torque, 80 W in = 80 W out.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/gear_train.lms` |
 
 | ![cardan_joint](docs/images/cardan_joint.png) | ![quarter_car](docs/images/quarter_car_model.png) |
 | --- | --- |
-| One universal joint makes a steady shaft wobble between w cos b and w / cos b.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/cardan_joint.lms` | The quarter-car suspension model (lmdraw).<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/quarter_car.lms` |
+| One universal joint makes a steady shaft wobble between w cos b and w / cos b.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/cardan_joint.lms` | The quarter-car suspension model (lmdraw).<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/quarter_car.lms` |
 
 | ![quarter_car](docs/images/quarter_car.png) | ![slider_crank](docs/images/slider_crank.png) |
 | --- | --- |
-| Over a speed bump: soft damping floats, hard damping jolts; nine dampers swept.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/quarter_car.lms` | Slider-crank driven by a motor: slider position against the closed form.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/slider_crank.lms` |
+| Over a speed bump: soft damping floats, hard damping jolts; nine dampers swept.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/quarter_car.lms` | Slider-crank driven by a motor: slider position against the closed form.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/slider_crank.lms` |
 
 | ![viz_crank_snapshots](docs/images/crank_snapshots.png) |  |
 | --- | --- |
-| The slider-crank drawn at four crank angles from the simulated positions.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_crank_snapshots.lms` |  |
+| The slider-crank drawn at four crank angles from the simulated positions.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_crank_snapshots.lms` |  |
 
 
 ### Projectiles
 
 | ![projectile_drag](docs/images/projectile_drag.png) | ![viz_projectile](docs/images/projectile.png) |
 | --- | --- |
-| A baseball hit at 45 m/s: air drag cuts 206 m to 111 m and the best angle to 40 degrees.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/projectile_drag.lms` | Projectile range against launch angle in vacuum: 44 simulations, 45 degrees wins.<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_projectile.lms` |
+| A baseball hit at 45 m/s: air drag cuts 206 m to 111 m and the best angle to 40 degrees.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/projectile_drag.lms` | Projectile range against launch angle in vacuum: 44 simulations, 45 degrees wins.<br>`lmctl https://raw.githubusercontent.com/lmctl-ai/lmphysics/main/examples/viz_projectile.lms` |
 
 
 Every picture is made by the script named under it: it runs the simulation with lmphysics, draws with [lmplot](https://github.com/lmctl-ai/lmplot), [lmdraw](https://github.com/lmctl-ai/lmdraw), [lmcad](https://github.com/lmctl-ai/lmcad) or [lmblender](https://github.com/lmctl-ai/lmblender) and writes `images/` into the current directory. `examples/render-all.sh` regenerates `docs/images/`. The Cycles renders pass recorded positions and quaternions through the [portable CSV-to-OBJ pose bridge](examples/bridge/README.md) (boxes, spheres, cylinders) to [lmblender](https://github.com/lmctl-ai/lmblender).
