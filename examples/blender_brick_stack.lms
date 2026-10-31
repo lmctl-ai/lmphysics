@@ -15,7 +15,7 @@ for (i in range(0,6)) {
 s.run(1.6); s.save_csv("build/examples/brick_poses.csv");
 end _lmcode_
 savedsl(sim,"build/blender_brick_stack-sim.dslb");
-r=system ${dsl_cli(sim)} --dsl build/blender_brick_stack-sim.dslb;
+r=system ${dsl_cli(sim)} --lmcode build/blender_brick_stack-sim.dslb;
 if (r.code!=0) { println(r.stdout); println(r.stderr); } assert(r.code==0);
 rows=csv_parse(read_file("build/examples/brick_poses.csv"));
 frames=[rows[0],rows[2],rows[rows.len()-1]];
@@ -51,7 +51,7 @@ scene.render_settings(6,17,true);
 scene.render_png("images/blender_brick_stack.png",32,960,560);
 end _lmcode_
 savedsl(draw, "build/blender_brick_stack-draw.dslb");
-argv=dsl_cli(draw); push(argv,"--dsl"); push(argv,"build/blender_brick_stack-draw.dslb");
+argv=dsl_cli(draw); push(argv,"--lmcode"); push(argv,"build/blender_brick_stack-draw.dslb");
 r=system(argv,300000);
 if (r.code!=0) { println(r.stdout); println(r.stderr); }
 assert(r.code==0);

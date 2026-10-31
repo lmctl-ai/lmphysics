@@ -16,7 +16,7 @@ resting contact.
 ## Pictures
 
 The README opens with 16 images in `docs/images/`, grouped by theme. Every image is made by a self-contained example:
-`lmctl autorun <raw url>` in an empty directory runs the simulation (`system ${dsl_cli(sim)} --dsl ...`), draws, and
+`lmctl autorun <raw url>` in an empty directory runs the simulation (`system ${dsl_cli(sim)} --lmcode ...`), draws, and
 writes `images/<name>.png` plus scratch files under `build/`. `examples/render-all.sh` runs all of them with `docs/` as the
 working directory to refresh `docs/images/`.
 

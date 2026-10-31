@@ -22,7 +22,7 @@ phys.assert_close(slider.x(), 0.1 * cos(th) + sqrt(0.09 - 0.01 * sin(th) * sin(t
 s.save_csv("build/examples/slider_crank.csv");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -37,6 +37,6 @@ plot.cmd("plot 'build/examples/slider_crank.csv' skip 1 using 1:2 with lines lw 
 plot.close();
 end _lmcode_
 savedsl(draw, "build/slider_crank-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/slider_crank-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/slider_crank-draw.dslb;
 assert(r.code == 0);
 println("wrote images/slider_crank.png");

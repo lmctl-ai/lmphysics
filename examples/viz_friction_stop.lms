@@ -48,7 +48,7 @@ s3.run(6.0);
 s3.save_csv("build/examples/friction_mu060.csv");
 end _lmcode_
 savedsl(sim, "build/viz_friction_stop-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_friction_stop-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_friction_stop-sim.dslb;
 assert(r.code == 0);
 write_file("build/examples/friction_stop.txt", r.stdout);
 
@@ -74,6 +74,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "build/viz_friction_stop-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/viz_friction_stop-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/viz_friction_stop-draw.dslb;
 assert(r.code == 0);
 println("wrote images/friction_stop.png");

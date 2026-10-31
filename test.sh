@@ -30,16 +30,17 @@ command -v ninja >/dev/null 2>&1 && GEN="-G Ninja"
 cmake -S . -B "$BUILD_DIR" $GEN -DCMAKE_BUILD_TYPE=Release >/dev/null
 cmake --build "$BUILD_DIR" >"$WORK/build.log" 2>&1 || { tail -40 "$WORK/build.log" >&2; fail "build"; }
 ok "build"
+python3 tests/check-host-flags.py schema/lmphysics.dsl.json "$HOST" || fail "hard host flag cutover"
 
 want_version="lmphysics $(sed -n 's/^project(lmphysics VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
 [ "$("$HOST" --version)" = "$want_version" ] || fail "--version is not exactly '$want_version'"
 ok "--version prints exactly '$want_version'"
 python3 scripts/gen-schema.py >/dev/null && git diff --quiet -- schema/lmphysics.dsl.json 2>/dev/null || [ ! -e .git ] || fail "schema/lmphysics.dsl.json is stale: run scripts/gen-schema.py"
 ok "schema matches the registrations in cpp/main.cpp"
-"$HOST" --dsl-schema --json >"$WORK/schema.json" || fail "embedded schema print"
+"$HOST" --lmcode-schema --json >"$WORK/schema.json" || fail "embedded schema print"
 cmp -s "$WORK/schema.json" schema/lmphysics.dsl.json || fail "embedded schema differs from schema/lmphysics.dsl.json"
-ok "--dsl-schema --json prints byte-identical embedded schema bytes"
-diff -u <("$LMSCRIPT" --dsl-signatures schema/lmphysics.dsl.json) <("$HOST" --dsl-signatures) || fail "host/compiler signatures differ"
+ok "--lmcode-schema --json prints byte-identical embedded schema bytes"
+diff -u <("$LMSCRIPT" --lmcode-signatures schema/lmphysics.dsl.json) <("$HOST" --lmcode-signatures) || fail "host/compiler signatures differ"
 ok "host registry matches compiler signatures"
 "$HOST" --notices | grep -q "Project Chrono" || fail "--notices missing third-party text"
 cmp -s <("$HOST" --notices) THIRD_PARTY_NOTICES || fail "--notices differs from THIRD_PARTY_NOTICES"
@@ -67,11 +68,11 @@ n=0
 for src in tests/*.lms; do
   name="$(basename "$src" .lms)"
   "$LMSCRIPT" "$src" "build/$name.dslb" >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name compile"; }
-  "$HOST" --dsl "build/$name.dslb" >"$WORK/$name.out" 2>"$WORK/$name.err" || { cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run"; }
+  "$HOST" --lmcode "build/$name.dslb" >"$WORK/$name.out" 2>"$WORK/$name.err" || { cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run"; }
   grep -q '"ok": true' "$WORK/$name.out" || { cat "$WORK/$name.out" >&2; fail "$name did not report ok"; }
   n=$((n+1))
 done
-ok "$n test programs compile as bytecode v5, run and pass their own assertions"
+ok "$n test programs compile as bytecode v6, run and pass their own assertions"
 
 [ "$(wc -l <build/loads_thinned.csv | tr -d ' ')" = 102 ] || fail "record_every(10) over 1000 steps should give header + 101 rows"
 ok "record_every thins the CSV (101 rows) and keeps the final state"
@@ -144,7 +145,7 @@ end _dsl_
 savedsl(p, "$WORK/$1.dslb");
 LMS
   "$LMSCRIPT" "$WORK/$1.lms" >/dev/null 2>"$WORK/$1.cerr" || { cat "$WORK/$1.cerr" >&2; fail "$1 compile"; }
-  set +e; out="$("$HOST" --dsl "$WORK/$1.dslb" 2>/dev/null)"; code=$?; set -e
+  set +e; out="$("$HOST" --lmcode "$WORK/$1.dslb" 2>/dev/null)"; code=$?; set -e
   [ "$code" = 3 ] || fail "$1: exit code $code, expected 3 ($out)"
   echo "$out" | grep -q "$3" || fail "$1: message lacks '$3': $out"
 }
@@ -205,9 +206,9 @@ end _dsl_
 savedsl(p, "$WORK/det.dslb");
 LMS
 "$LMSCRIPT" "$WORK/det.lms" >/dev/null || fail "determinism program compile"
-"$HOST" --dsl "$WORK/det.dslb" >/dev/null 2>&1 || fail "determinism run 1"
+"$HOST" --lmcode "$WORK/det.dslb" >/dev/null 2>&1 || fail "determinism run 1"
 mv "$WORK/det.csv" "$WORK/det1.csv"
-"$HOST" --dsl "$WORK/det.dslb" >/dev/null 2>&1 || fail "determinism run 2"
+"$HOST" --lmcode "$WORK/det.dslb" >/dev/null 2>&1 || fail "determinism run 2"
 mv "$WORK/det.csv" "$WORK/det2.csv"
 [ "$(wc -l <"$WORK/det1.csv" | tr -d ' ')" = 2002 ] || fail "determinism CSV has $(wc -l <"$WORK/det1.csv") lines, expected 2002"
 cmp -s "$WORK/det1.csv" "$WORK/det2.csv" || fail "contact CSV differs between two identical runs"
@@ -231,11 +232,11 @@ end _dsl_
 savedsl(p, "$WORK/runaway.dslb");
 LMS
 "$LMSCRIPT" "$WORK/runaway.lms" >/dev/null || fail "runaway.lms compile"
-set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=64 "$HOST" --dsl "$WORK/runaway.dslb" 2>"$WORK/runaway.err")"; code=$?; set -e
+set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=64 "$HOST" --lmcode "$WORK/runaway.dslb" 2>"$WORK/runaway.err")"; code=$?; set -e
 [ "$code" = 3 ] || fail "runaway loop under LMPHYSICS_MAX_MEMORY_MB=64: exit $code, expected 3 ($out)"
 echo "$out" | grep -q "memory budget exceeded" || fail "runaway loop: JSON lacks the budget message: $out"
 grep -q "LMPHYSICS_MAX_MEMORY_MB" "$WORK/runaway.err" || fail "runaway loop: no budget message on stderr"
-set +e; LMPHYSICS_MAX_MEMORY_MB=-5 "$HOST" --dsl "$WORK/runaway.dslb" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
+set +e; LMPHYSICS_MAX_MEMORY_MB=-5 "$HOST" --lmcode "$WORK/runaway.dslb" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
 [ "$code" = 2 ] && grep -q "positive whole number" "$WORK/badenv.err" || fail "bad LMPHYSICS_MAX_MEMORY_MB: exit $code"
 cat >"$WORK/stepmem.lms" <<LMS
 p = _dsl_ cli="lmphysics";
@@ -247,26 +248,26 @@ end _dsl_
 savedsl(p, "$WORK/stepmem.dslb");
 LMS
 "$LMSCRIPT" "$WORK/stepmem.lms" >/dev/null || fail "stepmem.lms compile"
-set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=50 "$HOST" --dsl "$WORK/stepmem.dslb" 2>/dev/null)"; code=$?; set -e
+set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=50 "$HOST" --lmcode "$WORK/stepmem.dslb" 2>/dev/null)"; code=$?; set -e
 [ "$code" = 3 ] && echo "$out" | grep -q "step failed at t = 0: memory budget exceeded" || fail "budget exceeded inside a contact step: exit $code ($out)"
 if [ "$UNAME_S" = Linux ]; then
-  set +e; out="$(ulimit -v 6291456; "$HOST" --dsl "$WORK/runaway.dslb" 2>/dev/null)"; code=$?; set -e
+  set +e; out="$(ulimit -v 6291456; "$HOST" --lmcode "$WORK/runaway.dslb" 2>/dev/null)"; code=$?; set -e
   [ "$code" = 3 ] && echo "$out" | grep -q "limit 4096 MiB" || fail "runaway loop with the default budget under ulimit -v 6 GiB: exit $code ($out)"
   ok "memory budget: runaway recording stops at 64 MiB and at the default 4096 MiB (under ulimit -v 6 GiB); a step past it is a step error"
 else
   ok "memory budget: runaway recording stops at LMPHYSICS_MAX_MEMORY_MB=64, a step past it is a step error (default-budget run is Linux-only)"
 fi
 
-set +e; "$HOST" --dsl "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
+set +e; "$HOST" --lmcode "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"
 set +e; "$HOST" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 2 ] || fail "usage exit code $code, expected 2"
 ok "usage and load errors use exit codes 2 and 3"
 
 # The published compiler injects std; the host embeds only its own schema bytes.
-"$LMSCRIPT" --dsl-signatures schema/lmphysics.dsl.json --without-std > "$WORK/std-host-only.sig"
-"$LMSCRIPT" --dsl-signatures cpp/std/lmcode-std.schema.json > "$WORK/std-builtins.sig"
-"$HOST" --dsl-signatures > "$WORK/std-registry.sig"
+"$LMSCRIPT" --lmcode-signatures schema/lmphysics.dsl.json --without-std > "$WORK/std-host-only.sig"
+"$LMSCRIPT" --lmcode-signatures cpp/std/lmcode-std.schema.json > "$WORK/std-builtins.sig"
+"$HOST" --lmcode-signatures > "$WORK/std-registry.sig"
 python3 - "$WORK" <<'PYSTD'
 import pathlib,sys,json
 w=pathlib.Path(sys.argv[1])
@@ -277,7 +278,7 @@ out=str(w/'std-probe.dslb').replace('\\','/')
 (w/'std-probe.lms').write_text('p = _lmcode_ schema='+json.dumps(schema)+';\nlet values = str_list().add("abc");\nif (str_len(values.at(0)) != 3) { let bad = int_list().at(0); }\nend _lmcode_\nsavedsl(p, '+json.dumps(out)+');\n')
 PYSTD
 "$LMSCRIPT" "$WORK/std-probe.lms" > "$WORK/std-probe.log" 2>&1 || { cat "$WORK/std-probe.log"; fail "implicit std compile"; }
-"$HOST" --dsl "$WORK/std-probe.dslb" > "$WORK/std-run.log" 2>&1 || { cat "$WORK/std-run.log"; fail "implicit std runtime"; }
+"$HOST" --lmcode "$WORK/std-probe.dslb" > "$WORK/std-run.log" 2>&1 || { cat "$WORK/std-run.log"; fail "implicit std runtime"; }
 ok "host-only signatures and implicit std runtime"
 
 echo "all $pass checks passed"

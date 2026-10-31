@@ -65,7 +65,7 @@ for (k in range(0, 44)) {
 }
 end _lmcode_
 savedsl(sim, "build/viz_projectile-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_projectile-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_projectile-sim.dslb;
 assert(r.code == 0);
 write_file("build/examples/projectile_range.txt", r.stdout);
 
@@ -93,6 +93,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "build/viz_projectile-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/viz_projectile-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/viz_projectile-draw.dslb;
 assert(r.code == 0);
 println("wrote images/projectile.png");

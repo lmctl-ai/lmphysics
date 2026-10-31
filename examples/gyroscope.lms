@@ -31,7 +31,7 @@ for (k in range(0, 7)) {
 }
 end _lmcode_
 savedsl(sim, "build/gyroscope-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/gyroscope-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/gyroscope-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -86,7 +86,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "build/gyroscope-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/gyroscope-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/gyroscope-draw.dslb;
 assert(r.code == 0);
 println("wrote images/gyroscope.png");
 
@@ -126,7 +126,7 @@ scene.render_settings(6, 17, true);
 scene.render_png("images/gyroscope_render.png", 48, 900, 600);
 end _lmcode_
 savedsl(render, "build/gyroscope-render.dslb");
-argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/gyroscope-render.dslb");
+argv = dsl_cli(render); push(argv, "--lmcode"); push(argv, "build/gyroscope-render.dslb");
 r = system(argv, 300000);
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);

@@ -38,7 +38,7 @@ a4.run(14.0);
 a4.save_csv("build/examples/phase_a4.csv");
 end _lmcode_
 savedsl(sim, "build/viz_pendulum_phase-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_pendulum_phase-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_pendulum_phase-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -55,6 +55,6 @@ plot.cmd("plot 'build/examples/phase_a1.csv' skip 1 using (atan2($2,-$3)):(-$4) 
 plot.close();
 end _lmcode_
 savedsl(draw, "build/viz_pendulum_phase-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/viz_pendulum_phase-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/viz_pendulum_phase-draw.dslb;
 assert(r.code == 0);
 println("wrote images/pendulum_phase.png");

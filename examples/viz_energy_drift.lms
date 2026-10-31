@@ -30,7 +30,7 @@ h.run(10.0);
 h.save_csv("build/examples/drift_hht.csv");
 end _lmcode_
 savedsl(sim, "build/viz_energy_drift-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_energy_drift-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_energy_drift-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -48,6 +48,6 @@ plot.cmd("plot 'build/examples/drift_euler.csv' skip 1 using 1:((en($3,$4,$5,$2)
 plot.close();
 end _lmcode_
 savedsl(draw, "build/viz_energy_drift-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/viz_energy_drift-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/viz_energy_drift-draw.dslb;
 assert(r.code == 0);
 println("wrote images/energy_drift.png");

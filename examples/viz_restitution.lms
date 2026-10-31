@@ -35,7 +35,7 @@ r4.run(3.0);
 r4.save_csv("build/examples/restitution_r4.csv");
 end _lmcode_
 savedsl(sim, "build/viz_restitution-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_restitution-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_restitution-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -51,6 +51,6 @@ plot.cmd("plot 'build/examples/restitution_r1.csv' skip 1 using 1:($2-0.05) with
 plot.close();
 end _lmcode_
 savedsl(draw, "build/viz_restitution-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/viz_restitution-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/viz_restitution-draw.dslb;
 assert(r.code == 0);
 println("wrote images/restitution.png");

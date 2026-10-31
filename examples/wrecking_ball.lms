@@ -34,7 +34,7 @@ s.run(4.0);
 s.save_csv("build/examples/wrecking_ball.csv");
 end _lmcode_
 savedsl(sim, "build/wrecking_ball-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/wrecking_ball-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/wrecking_ball-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -80,7 +80,7 @@ scene.render_settings(6, 17, true);
 scene.render_png("images/wrecking_ball.png", 48, 900, 600);
 end _lmcode_
 savedsl(render, "build/wrecking_ball-render.dslb");
-argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/wrecking_ball-render.dslb");
+argv = dsl_cli(render); push(argv, "--lmcode"); push(argv, "build/wrecking_ball-render.dslb");
 r = system(argv, 300000);
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);

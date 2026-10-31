@@ -34,7 +34,7 @@ s.run(2.0);
 s.save_csv("build/examples/harmonic_overhang.csv");
 end _lmcode_
 savedsl(sim, "build/harmonic_overhang-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/harmonic_overhang-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/harmonic_overhang-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -87,7 +87,7 @@ scene.render_settings(6, 17, true);
 scene.render_png("images/harmonic_overhang.png", 48, 900, 600);
 end _lmcode_
 savedsl(render, "build/harmonic_overhang-render.dslb");
-argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/harmonic_overhang-render.dslb");
+argv = dsl_cli(render); push(argv, "--lmcode"); push(argv, "build/harmonic_overhang-render.dslb");
 r = system(argv, 300000);
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);

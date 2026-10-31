@@ -134,7 +134,7 @@ phys.assert_close(s.energy() / e0, 1.0, 0.0001);                     # energy is
 s.save_csv("pendulum.csv");
 end _lmcode_
 savedsl(p, "pendulum.dslb");
-system ${dsl_cli(p)} --dsl pendulum.dslb;
+system ${dsl_cli(p)} --lmcode pendulum.dslb;
 ```
 
 `lmscript pendulum.lms` finds `lmphysics` on `PATH` or downloads the release binary for your

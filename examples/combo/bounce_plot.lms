@@ -12,7 +12,7 @@ s.run(4.0);
 s.save_csv("build/examples/bounce.csv");
 end _lmcode_
 savedsl(sim, "build/bounce-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/bounce-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/bounce-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -27,6 +27,6 @@ plot.cmd("plot 'build/examples/bounce.csv' using 2:3 with lines lw 2 lc rgb '#1f
 plot.close();
 end _lmcode_
 savedsl(draw, "build/bounce-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/bounce-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/bounce-draw.dslb;
 assert(r.code == 0);
 println("wrote images/bounce.png");

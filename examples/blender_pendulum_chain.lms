@@ -18,7 +18,7 @@ let energy=s.energy(); s.run(0.55); phys.assert_close(s.energy()/energy,1.0,0.00
 s.save_csv("build/examples/chain_poses.csv");
 end _lmcode_
 savedsl(sim,"build/blender_pendulum_chain-sim.dslb");
-r=system ${dsl_cli(sim)} --dsl build/blender_pendulum_chain-sim.dslb;
+r=system ${dsl_cli(sim)} --lmcode build/blender_pendulum_chain-sim.dslb;
 if (r.code!=0) { println(r.stdout); println(r.stderr); } assert(r.code==0);
 rows=csv_parse(read_file("build/examples/chain_poses.csv")); row=rows[rows.len()-1];
 for (name in ["a","b","c"]) { pose_box_obj(row,name,0.15,0.18,0.9,"build/examples/chain_"+name+".obj"); }
@@ -56,7 +56,7 @@ scene.render_settings(6,17,true);
 scene.render_png("images/blender_pendulum_chain.png",32,800,700);
 end _lmcode_
 savedsl(draw, "build/blender_pendulum_chain-draw.dslb");
-argv=dsl_cli(draw); push(argv,"--dsl"); push(argv,"build/blender_pendulum_chain-draw.dslb");
+argv=dsl_cli(draw); push(argv,"--lmcode"); push(argv,"build/blender_pendulum_chain-draw.dslb");
 r=system(argv,300000);
 if (r.code!=0) { println(r.stdout); println(r.stderr); }
 assert(r.code==0);

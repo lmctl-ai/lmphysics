@@ -33,7 +33,7 @@ phys.assert_close(b.energy() / eb, 1.0, 0.001);
 b.save_csv("build/examples/dpend_b.csv");
 end _lmcode_
 savedsl(sim, "build/viz_double_pendulum-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_double_pendulum-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_double_pendulum-sim.dslb;
 assert(r.code == 0);
 
 # Tip separation of the two runs, one line per 25 ms: "t distance".
@@ -77,6 +77,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "build/viz_double_pendulum-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/viz_double_pendulum-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/viz_double_pendulum-draw.dslb;
 assert(r.code == 0);
 println("wrote images/double_pendulum.png");

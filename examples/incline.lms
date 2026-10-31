@@ -23,7 +23,7 @@ phys.assert_close(b.speed(), 0.0, 0.05);
 stick.save_csv("build/examples/incline_sticks.csv");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -39,6 +39,6 @@ plot.cmd("plot 'build/examples/incline_slides.csv' skip 1 using 1:($4*cos(th)-$5
 plot.close();
 end _lmcode_
 savedsl(draw, "build/incline-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/incline-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/incline-draw.dslb;
 assert(r.code == 0);
 println("wrote images/incline.png");

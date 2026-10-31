@@ -22,7 +22,7 @@ s.run(1.3);
 s.save_csv("build/examples/crank_snapshots.csv");
 end _lmcode_
 savedsl(sim, "build/viz_crank_snapshots-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_crank_snapshots-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_crank_snapshots-sim.dslb;
 assert(r.code == 0);
 
 rows = csv_parse(read_file("build/examples/crank_snapshots.csv"));
@@ -113,7 +113,7 @@ scene.text(560.0, 535.0, 13.0, ${lab3}, "#9fb3c8");
 scene.render_png("build/rendered/crank_snapshots.png", 1000, 640, 1);
 end _lmcode_
 savedsl(d, "build/viz_crank_snapshots-draw.dslb");
-r = system ${dsl_cli(d)} --dsl build/viz_crank_snapshots-draw.dslb;
+r = system ${dsl_cli(d)} --lmcode build/viz_crank_snapshots-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/crank_snapshots.png", "images/crank_snapshots.png");

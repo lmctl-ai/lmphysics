@@ -12,7 +12,7 @@ lmplot or the network is available):
 1. SDK header and `third_party/` match their pins;
 2. build; `--version` is exactly `lmphysics 0.1.3`;
 3. schema file is what `gen-schema.py` regenerates; embedded schema bytes equal the file; the host
-   registry equals `lmscript --dsl-signatures`;
+   registry equals `lmscript --lmcode-signatures`;
 4. `--notices` contains the Chrono text; glibc dependency/ABI allowlist (Linux), only system libs (macOS),
    no MinGW runtime DLLs (Windows);
 5. every program under `tests/` and `examples/` compiles to bytecode v5 and runs with `"ok": true`;
@@ -31,3 +31,7 @@ lmplot or the network is available):
 9. usage (exit 2) and missing bytecode (exit 3).
 
 Current v0.1.3 Linux verification: all 19 checks pass, with 40 gallery images validated, 35 example runs, 106 deterministic result files and 40 error cases. The Linux x64 executable is 9,408,352 bytes stripped, needs only libm.so.6, libc.so.6 and ld-linux-x86-64.so.2, and has maximum GLIBC_2.34 (supported baseline glibc >= 2.35). Separate fresh-directory pendulum, bounce and gear-train README runs passed using the built binary and published lmplot v0.2.1.
+
+## Native host flag contract
+
+The host accepts only the lmcode option family, with no retired aliases. The full gate checks exact schema/signature output, new loader routing and rejection before file effects in scratch HOME. SDK20325f7 is synchronized through the owner script for actual source-compiler v6 capabilities; package metadata alone is insufficient. Internal DSLB and .dslb names remain.

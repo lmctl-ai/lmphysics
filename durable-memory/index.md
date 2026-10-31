@@ -14,7 +14,7 @@
 
 ## Adding an example or function
 - **New example**: Add `examples/<name>.lms` using `_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest"`. Output plots or CSVs to `images/` or stdout. Add golden checks in `test.sh` and update `README.md` gallery with `<img src="...">` and `lmctl autorun <raw .lms URL>` caption.
-- **New host function**: Declare in `schema/lmphysics.dsl.json`, register in `src/registry.cpp` via `dslvm::Registry`, and verify `test.sh` passes (`--dsl-schema` and `--dsl-signatures` match compiler output).
+- **New host function**: Declare in `schema/lmphysics.dsl.json`, register in `src/registry.cpp` via `dslvm::Registry`, and verify `test.sh` passes (`--lmcode-schema` and `--lmcode-signatures` match compiler output).
 
 ## Releases
 Releases are cut automatically on push to `main` when CI workflows pass all platforms.

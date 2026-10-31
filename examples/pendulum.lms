@@ -17,7 +17,7 @@ phys.assert_close(bob.x() * bob.x() + bob.z() * bob.z(), 1.0, 0.001);
 s.save_csv("build/examples/pendulum.csv");
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -35,6 +35,6 @@ plot.cmd("plot 'build/examples/pendulum.csv' skip 1 using 1:6 with lines lw 2 lc
 plot.close();
 end _lmcode_
 savedsl(draw, "build/pendulum-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/pendulum-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/pendulum-draw.dslb;
 assert(r.code == 0);
 println("wrote images/pendulum.png");

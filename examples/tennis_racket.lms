@@ -27,7 +27,7 @@ for (k in range(0, 3)) {
 }
 end _lmcode_
 savedsl(sim, "build/tennis_racket-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/tennis_racket-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/tennis_racket-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -66,7 +66,7 @@ plot.cmd("plot 'build/examples/tennis_racket.csv' skip 1 using 1:2 with lines lw
 plot.close();
 end _lmcode_
 savedsl(draw, "build/tennis_racket-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/tennis_racket-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/tennis_racket-draw.dslb;
 assert(r.code == 0);
 println("wrote images/tennis_racket.png");
 
@@ -114,7 +114,7 @@ scene.render_settings(6, 17, true);
 scene.render_png("images/tennis_racket_render.png", 48, 1000, 400);
 end _lmcode_
 savedsl(render, "build/tennis_racket-render.dslb");
-argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/tennis_racket-render.dslb");
+argv = dsl_cli(render); push(argv, "--lmcode"); push(argv, "build/tennis_racket-render.dslb");
 r = system(argv, 300000);
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);

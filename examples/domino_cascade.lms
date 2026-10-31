@@ -26,7 +26,7 @@ for (k in range(0, 5)) {
 }
 end _lmcode_
 savedsl(sim, "build/domino_cascade-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/domino_cascade-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/domino_cascade-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -81,7 +81,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "build/domino_cascade-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/domino_cascade-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/domino_cascade-draw.dslb;
 assert(r.code == 0);
 println("wrote images/domino_cascade.png");
 
@@ -108,7 +108,7 @@ scene.render_settings(6, 17, true);
 scene.render_png("images/domino_cascade_render.png", 48, 900, 520);
 end _lmcode_
 savedsl(render, "build/domino_cascade-render.dslb");
-argv = dsl_cli(render); push(argv, "--dsl"); push(argv, "build/domino_cascade-render.dslb");
+argv = dsl_cli(render); push(argv, "--lmcode"); push(argv, "build/domino_cascade-render.dslb");
 r = system(argv, 300000);
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);

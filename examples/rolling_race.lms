@@ -38,7 +38,7 @@ phys.assert_close((hoop.x() - x0) / cos(th), s / 2.0, 0.03);
 w.save_csv("build/examples/rolling_race.csv");
 end _lmcode_
 savedsl(sim, "build/rolling_race-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/rolling_race-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/rolling_race-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -61,6 +61,6 @@ plot.cmd("plot 'build/examples/rolling_race.csv' skip 1 using 1:(($2 - x0)/c) wi
 plot.close();
 end _lmcode_
 savedsl(draw, "build/rolling_race-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/rolling_race-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/rolling_race-draw.dslb;
 assert(r.code == 0);
 println("wrote images/rolling_race.png");

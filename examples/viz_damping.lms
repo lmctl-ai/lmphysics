@@ -42,7 +42,7 @@ d4.run(2.0);
 d4.save_csv("build/examples/damping_d4.csv");
 end _lmcode_
 savedsl(sim, "build/viz_damping-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_damping-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_damping-sim.dslb;
 assert(r.code == 0);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
@@ -59,6 +59,6 @@ plot.cmd("plot 'build/examples/damping_d1.csv' skip 1 using 1:2 with lines lw 3 
 plot.close();
 end _lmcode_
 savedsl(draw, "build/viz_damping-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/viz_damping-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/viz_damping-draw.dslb;
 assert(r.code == 0);
 println("wrote images/damping.png");

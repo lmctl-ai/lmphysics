@@ -27,7 +27,7 @@ phys.assert_close(s.energy() - e0, 0.0, 0.00001);
 s.save_csv("build/examples/coupled_pendulums.csv");
 end _lmcode_
 savedsl(sim, "build/coupled_pendulums-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/coupled_pendulums-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/coupled_pendulums-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -77,6 +77,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "build/coupled_pendulums-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/coupled_pendulums-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/coupled_pendulums-draw.dslb;
 assert(r.code == 0);
 println("wrote images/coupled_pendulums.png");

@@ -1,5 +1,5 @@
 // lmphysics: Project Chrono core (rigid bodies, joints, contact) behind an lmscript `_dsl_` schema.
-// Scripting only: the executable has no user-facing commands besides --dsl and the schema/version queries.
+// Scripting only: the executable has no user-facing commands besides --lmcode and the schema/version queries.
 #include <cmath>
 #include <cstdio>
 #include <deque>
@@ -928,7 +928,7 @@ void register_host(dslvm::Registry &r, Host &h) {
   method(r, "Joint", "reaction_z", {}, "float", [](void *p, Args &) { return Value::real(joint_value_of(J(p), "fz")); });
 }
 
-const char *usage = "usage: lmphysics --version | --notices | --dsl-schema [--json] | --dsl-signatures | [--dry-run] --dsl FILE [FILE ...]\n"
+const char *usage = "usage: lmphysics --version | --notices | --lmcode-schema [--json] | --lmcode-signatures | [--dry-run] --lmcode FILE [FILE ...]\n"
                     "environment: LMPHYSICS_MAX_MEMORY_MB  total memory budget in MiB (default 4096); a program that needs more\n"
                     "             stops with a run error (exit 3) instead of allocating\n";
 
@@ -953,7 +953,7 @@ int main(int argc, char **argv) {
     std::cout.write(reinterpret_cast<const char *>(lmphysics::embedded_notices), (std::streamsize)lmphysics::embedded_notices_size);
     return std::cout ? 0 : 4;
   }
-  if (argc >= 2 && a1 == "--dsl-schema") {
+  if (argc >= 2 && a1 == "--lmcode-schema") {
     if (argc == 2) { for (const auto &s : reg.signatures()) std::cout << s << "\n"; return std::cout ? 0 : 4; }
     if (argc == 3 && std::string(argv[2]) == "--json") {
       std::cout.write(reinterpret_cast<const char *>(lmphysics::embedded_schema), (std::streamsize)lmphysics::embedded_schema_size);
@@ -961,10 +961,10 @@ int main(int argc, char **argv) {
     }
     std::cerr << usage; return 2;
   }
-  if (argc == 2 && a1 == "--dsl-signatures") { for (const auto &s : reg.signatures()) std::cout << s << "\n"; return 0; }
+  if (argc == 2 && a1 == "--lmcode-signatures") { for (const auto &s : reg.signatures()) std::cout << s << "\n"; return 0; }
   int first = 2;
   if (argc >= 2 && a1 == "--dry-run") first = 3;  // accepted for symmetry: nothing here has side effects beyond files
-  if (argc <= first || std::string(argv[first - 1]) != "--dsl") { std::cerr << usage; return 2; }
+  if (argc <= first || std::string(argv[first - 1]) != "--lmcode") { std::cerr << usage; return 2; }
   for (int i = first; i < argc; i++)
     if (std::string(argv[i]).empty() || std::string(argv[i]).rfind("--", 0) == 0) { std::cerr << usage; return 2; }
   if (!membudget::configure("lmphysics", "LMPHYSICS_MAX_MEMORY_MB")) { std::cerr << usage; return 2; }

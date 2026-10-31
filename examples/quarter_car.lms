@@ -36,7 +36,7 @@ for (k in range(0, 9)) {
 }
 end _lmcode_
 savedsl(sim, "build/quarter_car-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/quarter_car-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/quarter_car-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -94,7 +94,7 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "build/quarter_car-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/quarter_car-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/quarter_car-draw.dslb;
 assert(r.code == 0);
 println("wrote images/quarter_car.png");
 
@@ -136,7 +136,7 @@ scene.text(545.0, 278.0, 14.0, "Cars pick c near 0.3 of critical: about 1500 N s
 scene.render_png("build/rendered/quarter_car_model.png", 900, 560, 1);
 end _lmcode_
 savedsl(d, "build/quarter_car-model.dslb");
-r = system ${dsl_cli(d)} --dsl build/quarter_car-model.dslb;
+r = system ${dsl_cli(d)} --lmcode build/quarter_car-model.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/quarter_car_model.png", "images/quarter_car_model.png");

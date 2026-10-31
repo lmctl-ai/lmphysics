@@ -61,7 +61,7 @@ c.run(4.0);
 c.save_csv("build/examples/resonance_w14.csv");
 end _lmcode_
 savedsl(sim, "build/viz_resonance-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/viz_resonance-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/viz_resonance-sim.dslb;
 assert(r.code == 0);
 write_file("build/examples/resonance_curve.txt", r.stdout);
 
@@ -86,6 +86,6 @@ plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
 savedsl(draw, "build/viz_resonance-draw.dslb");
-r = system ${dsl_cli(draw)} --dsl build/viz_resonance-draw.dslb;
+r = system ${dsl_cli(draw)} --lmcode build/viz_resonance-draw.dslb;
 assert(r.code == 0);
 println("wrote images/resonance.png");

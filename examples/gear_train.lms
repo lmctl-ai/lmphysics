@@ -35,7 +35,7 @@ phys.assert_close(a2.angle() / drive.angle(), 0.25, 0.001);
 s.save_csv("build/examples/gear_train.csv");
 end _lmcode_
 savedsl(sim, "build/gear_train-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/gear_train-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/gear_train-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -106,7 +106,7 @@ scene.text(40.0, 606.0, 14.0, ${txt5}, "#9fb3c8");
 scene.render_png("build/rendered/gear_train.png", 900, 620, 1);
 end _lmcode_
 savedsl(d, "build/gear_train-draw.dslb");
-r = system ${dsl_cli(d)} --dsl build/gear_train-draw.dslb;
+r = system ${dsl_cli(d)} --lmcode build/gear_train-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/gear_train.png", "images/gear_train.png");

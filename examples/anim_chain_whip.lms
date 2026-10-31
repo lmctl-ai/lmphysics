@@ -21,7 +21,7 @@ s.run(0.8);
 s.save_csv("build/examples/anim_chain_whip.csv");
 end _lmcode_
 savedsl(sim, "build/anim_chain_whip-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/anim_chain_whip-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/anim_chain_whip-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -57,7 +57,7 @@ for (k in range(0, rows.len())) {
   scene.render_png(${frame}, 600, 540, 1);
 end _lmcode_
   savedsl(d, "build/chain_frame.dslb");
-  r = system ${dsl_cli(d)} --dsl build/chain_frame.dslb;
+  r = system ${dsl_cli(d)} --lmcode build/chain_frame.dslb;
   assert(r.code == 0);
 }
 r = system ffmpeg -y -loglevel error -framerate 15 -i build/rendered/chain%03d.png -vf "split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse" images/chain_whip.gif;

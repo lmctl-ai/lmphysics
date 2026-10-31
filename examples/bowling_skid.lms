@@ -24,7 +24,7 @@ phys.assert_close(ball.wy() * r, 5.0 / 7.0 * v0, 0.02);
 w.save_csv("build/examples/bowling_skid.csv");
 end _lmcode_
 savedsl(sim, "build/bowling_skid-sim.dslb");
-r = system ${dsl_cli(sim)} --dsl build/bowling_skid-sim.dslb;
+r = system ${dsl_cli(sim)} --lmcode build/bowling_skid-sim.dslb;
 if (r.code != 0) { println(r.stdout); println(r.stderr); }
 assert(r.code == 0);
 
@@ -102,7 +102,7 @@ scene.text(470.0, 542.0, 14.0, ${lab2}, "#ffd166");
 scene.render_png("build/rendered/bowling_skid.png", 900, 560, 1);
 end _lmcode_
 savedsl(d, "build/bowling_skid-draw.dslb");
-r = system ${dsl_cli(d)} --dsl build/bowling_skid-draw.dslb;
+r = system ${dsl_cli(d)} --lmcode build/bowling_skid-draw.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/bowling_skid.png", "images/bowling_skid.png");

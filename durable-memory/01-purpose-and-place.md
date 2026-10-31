@@ -5,8 +5,8 @@ lmphysics is the `lmphysics` entry of the *scripted scientific libraries* family
 Project Chrono's core module, statically linked into one executable and driven from lmscript `_dsl_`
 bytecode through an embedded schema. Script = policy and control flow, host = heavy code.
 
-- **Scripting only.** No user CLI beyond `--dsl`, `--dry-run`, `--version`, `--notices`,
-  `--dsl-schema [--json]`, `--dsl-signatures` (exit codes 2 usage, 3 load/run error).
+- **Scripting only.** No user CLI beyond `--lmcode`, `--dry-run`, `--version`, `--notices`,
+  `--lmcode-schema [--json]`, `--lmcode-signatures` (exit codes 2 usage, 3 load/run error).
 - **Chrono, not Bullet.** The feasibility note allowed a fallback to Bullet if Chrono could not be
   built statically on all platforms. It can: the core module needs only Eigen, builds in ~4 min on
   4 cores, and yields one Linux executable (dynamic glibc >= 2.35, static scientific/C++ code). Chrono already provides joints, motors, TSDAs
