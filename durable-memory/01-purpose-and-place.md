@@ -2,7 +2,7 @@
 
 lmphysics is the `lmphysics` entry of the *scripted scientific libraries* family
 (`../../simulation/ROADMAP.md`, `../../simulation/FEASIBILITY.md` section "Recommendation 2"):
-Project Chrono's core module, statically linked into one executable and driven from lmscript `_dsl_`
+Project Chrono's core module, statically linked into one executable and driven from lmscript `_lmcode_`
 bytecode through an embedded schema. Script = policy and control flow, host = heavy code.
 
 - **Scripting only.** No user CLI beyond `--lmcode`, `--dry-run`, `--version`, `--notices`,
@@ -17,7 +17,7 @@ bytecode through an embedded schema. Script = policy and control flow, host = he
   several Chrono integrators; per-step CSV recording of body and joint quantities.
 - **Not in scope**: meshes and mesh collision, FEA, vehicles, granular/multicore, visualization,
   other Chrono modules, OpenMP (single thread keeps runs deterministic).
-- Programs bind with `_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";`.
+- Programs bind with `_lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";` and run with `r = run_lmcode(p);`.
 
 ## Scope boundary (DSL has no lists, maps or closures)
 

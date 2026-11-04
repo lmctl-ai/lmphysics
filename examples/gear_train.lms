@@ -34,10 +34,9 @@ phys.assert_close(drive.effort(), 0.5, 0.01);
 phys.assert_close(a2.angle() / drive.angle(), 0.25, 0.001);
 s.save_csv("build/examples/gear_train.csv");
 end _lmcode_
-savedsl(sim, "build/gear_train-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/gear_train-sim.dslb;
-if (r.code != 0) { println(r.stdout); println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
 rows = csv_parse(read_file("build/examples/gear_train.csv"));
 row = rows[rows.len() - 1];
@@ -105,9 +104,8 @@ scene.text(40.0, 584.0, 14.0, ${txt4}, "#e6edf3");
 scene.text(40.0, 606.0, 14.0, ${txt5}, "#9fb3c8");
 scene.render_png("build/rendered/gear_train.png", 900, 620, 1);
 end _lmcode_
-savedsl(d, "build/gear_train-draw.dslb");
-r = system ${dsl_cli(d)} --lmcode build/gear_train-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(d);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 copy_file("build/rendered/gear_train.png", "images/gear_train.png");
 println("wrote images/gear_train.png");

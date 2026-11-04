@@ -22,9 +22,8 @@ for (k in range(0, 40)) {
 s.run(2.5);
 s.save_csv("build/examples/pour.csv");
 end _lmcode_
-savedsl(sim, "build/viz_pour-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/viz_pour-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
 # Last CSV row -> lmcad keyframe file (t,x,y,z,r,g,b): one row per ball, lmcad's y axis is up.
 rows = csv_parse(read_file("build/examples/pour.csv"));
@@ -60,8 +59,7 @@ scene.ambient(0.22);
 scene.supersample(2);
 scene.render_png("images/pour.png", 900, 600);
 end _lmcode_
-savedsl(draw, "build/viz_pour-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/viz_pour-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(draw);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/pour.png");

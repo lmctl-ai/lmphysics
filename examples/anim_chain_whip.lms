@@ -20,10 +20,9 @@ for (i in range(0, 12)) {
 s.run(0.8);
 s.save_csv("build/examples/anim_chain_whip.csv");
 end _lmcode_
-savedsl(sim, "build/anim_chain_whip-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/anim_chain_whip-sim.dslb;
-if (r.code != 0) { println(r.stdout); println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
 rows = csv_parse(read_file("build/examples/anim_chain_whip.csv"));
 assert(rows.len() == 81);
@@ -40,7 +39,7 @@ for (k in range(0, rows.len())) {
   tz = 110.0 - 330.0 * (num(row["l11.z"]) - 0.1 * (qy * qz + w * qx));
   pts = pts + sprintf("%.1f,%.1f", tx, tz);
   trail = trail + sprintf("%.1f,%.1f ", tx, tz);
-  # Whole pixels: lmscript writes an integral float into the _dsl_ block as an int literal.
+  # Whole pixels: lmscript writes an integral float into the _lmcode_ block as an int literal.
   txi = round(tx); tzi = round(tz);
   sp = sqrt(num(row["l11.vx"]) * num(row["l11.vx"]) + num(row["l11.vz"]) * num(row["l11.vz"]));
   label = sprintf("t = %.2f s     tip speed %.1f m/s", num(row["t"]), sp);
@@ -56,9 +55,8 @@ for (k in range(0, rows.len())) {
   scene.circle(float(${txi}), float(${tzi}), 7.0, "#ff6b6b");
   scene.render_png(${frame}, 600, 540, 1);
 end _lmcode_
-  savedsl(d, "build/chain_frame.dslb");
-  r = system ${dsl_cli(d)} --lmcode build/chain_frame.dslb;
-  assert(r.code == 0);
+  r = run_lmcode(d);
+  assert(r.ok);
 }
 r = system ffmpeg -y -loglevel error -framerate 15 -i build/rendered/chain%03d.png -vf "split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse" images/chain_whip.gif;
 assert(r.code == 0);

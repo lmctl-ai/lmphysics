@@ -8,6 +8,7 @@
 mkdir("build/examples");
 mkdir("images");
 sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let table = "";
 for (k in range(0, 40)) {
   let mu = 0.05 + 0.02 * float(k);
   let w = phys.system("nsc");
@@ -23,7 +24,7 @@ for (k in range(0, 40)) {
   let dist = blk.x() - x0;
   let want = v0 * v0 / (2.0 * mu * 9.81);
   phys.assert_close(dist, want, 0.03 * want + 0.03);
-  phys.print(str(mu) + " " + str(dist) + " " + str(want));
+  table = table + str(mu) + " " + str(dist) + " " + str(want) + "\n";
 }
 let s1 = phys.system("nsc");
 s1.material("rough", 0.1, 0.0).timestep(0.002);
@@ -46,11 +47,10 @@ let c3 = s3.box("blk", 0.4, 0.4, 0.2, 125.0).pos(0.0, 0.0, 0.112).vel(6.4, 0.0, 
 s3.record("blk", "x,vx");
 s3.run(6.0);
 s3.save_csv("build/examples/friction_mu060.csv");
+file_write("build/examples/friction_stop.txt", table);
 end _lmcode_
-savedsl(sim, "build/viz_friction_stop-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/viz_friction_stop-sim.dslb;
-assert(r.code == 0);
-write_file("build/examples/friction_stop.txt", r.stdout);
+r = run_lmcode(sim);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/friction_stop.png", 1100, 480);
@@ -73,7 +73,6 @@ plot.cmd("plot 'build/examples/friction_mu010.csv' skip 1 using 1:3 with lines l
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/viz_friction_stop-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/viz_friction_stop-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/friction_stop.png");

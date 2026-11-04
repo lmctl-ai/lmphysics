@@ -1,6 +1,5 @@
 # Two identical blocks on a 30 degree ramp, friction 0.3 and 0.7. tan(30) = 0.577: the first slides with
 # a = g (sin - mu cos), the second sticks. The same experiment runs with the penalty (SMC) formulation.
-out = ARGV.len() > 0 ? ARGV[0] : "build/incline.dslb";
 mkdir("build/examples");
 mkdir("images");
 p = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
@@ -22,9 +21,8 @@ stick.run(1.5);
 phys.assert_close(b.speed(), 0.0, 0.05);
 stick.save_csv("build/examples/incline_sticks.csv");
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/incline.png", 900, 520);
@@ -38,7 +36,6 @@ plot.cmd("th = 0.5235987755982988");
 plot.cmd("plot 'build/examples/incline_slides.csv' skip 1 using 1:($4*cos(th)-$5*sin(th)) with lines lw 3 lc rgb '#1f77b4' title 'mu = 0.3, NSC', 9.81*(sin(th)-0.3*cos(th))*x with lines dt 2 lw 2 lc rgb 'black' title 'g (sin - mu cos) t', 'build/examples/incline_sticks.csv' skip 1 using 1:4 with lines lw 3 lc rgb '#d62728' title 'mu = 0.7, SMC (sticks)'");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/incline-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/incline-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/incline.png");

@@ -41,9 +41,8 @@ d4.record("m", "x");
 d4.run(2.0);
 d4.save_csv("build/examples/damping_d4.csv");
 end _lmcode_
-savedsl(sim, "build/viz_damping-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/viz_damping-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/damping.png", 900, 520);
@@ -58,7 +57,6 @@ plot.cmd("xs(z,t) = z < 1 ? exp(-z*w0*t)*(cos(w0*sqrt(1-z*z)*t) + z/sqrt(1-z*z)*
 plot.cmd("plot 'build/examples/damping_d1.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#1f77b4' title 'zeta = 0.1', 'build/examples/damping_d2.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#2ca02c' title 'zeta = 0.5', 'build/examples/damping_d3.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#ff7f0e' title 'zeta = 1.0', 'build/examples/damping_d4.csv' skip 1 using 1:2 with lines lw 3 lc rgb '#d62728' title 'zeta = 2.0', xs(0.1,x) with lines dt 2 lw 1 lc rgb 'black' notitle, xs(0.5,x) with lines dt 2 lw 1 lc rgb 'black' notitle, xs(1.0,x) with lines dt 2 lw 1 lc rgb 'black' notitle, xs(2.0,x) with lines dt 2 lw 1 lc rgb 'black' notitle");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/viz_damping-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/viz_damping-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/damping.png");

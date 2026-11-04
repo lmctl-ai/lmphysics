@@ -16,7 +16,7 @@ resting contact.
 ## Pictures
 
 The README opens with 16 images in `docs/images/`, grouped by theme. Every image is made by a self-contained example:
-`lmctl autorun <raw url>` in an empty directory runs the simulation (`system ${dsl_cli(sim)} --lmcode ...`), draws, and
+`lmctl autorun <raw url>` in an empty directory runs the simulation (`r = run_lmcode(sim);`), draws, and
 writes `images/<name>.png` plus scratch files under `build/`. `examples/render-all.sh` runs all of them with `docs/` as the
 working directory to refresh `docs/images/`.
 
@@ -34,12 +34,12 @@ working directory to refresh `docs/images/`.
 | `viz_pour` | pour.png | 40 balls settled in a box; lmscript turns the final CSV row into an lmcad keyframe file |
 | `viz_damping`, `viz_resonance`, `viz_projectile` | damping.png, resonance.png, projectile.png | closed-form checks for oscillators and ballistics |
 
-How the hosts talk: sweeps print one line per case with `phys.print`; lmscript saves `r.stdout` and lmplot reads the file
-(`every ::0::N` skips the final JSON status line). lmscript has `csv_parse(read_file(..))`, `write_file`, `copy_file`,
+How the hosts talk: a sweep builds one line per case and writes the table with `file_write` inside its block, and lmplot
+reads the file (run_lmcode returns the result envelope, not host stdout; `phys.print` output goes to lmscript's stdout). lmscript has `csv_parse(read_file(..))`, `write_file`, `copy_file`,
 `sprintf` (no `%e`), `sqrt`/`abs`, no trig, no `split`. `${x}` substitutes an integral number as an int literal, so wrap
 with `+ 0.0001` or `float()` where the DSL wants a float. `plot.data` silently truncates large strings (about 8-11 KB seen):
 write a file and read it from gnuplot instead. lmdraw may only write under `build/rendered/` (copy_file to `images/`),
-and its `end _dsl_` line must start at column 1 even inside a loop. lmcad's `read_keyframes_csv` (header
+and its `end _lmcode_` line must start at column 1 even inside a loop. lmcad's `read_keyframes_csv` (header
 `t,x,y,z,r,g,b`) doubles as a point-list reader. Chrono's y/z differ from lmcad's (y up): map (x, y, z) to (x, z, y).
 
 `test.sh` checks the gallery (PNG/GIF magic, <= 3 MB, linked examples exist), runs the examples in a scratch directory
@@ -60,7 +60,7 @@ wrecking_ball (pyramid with APGD and default margins), and four that need v0.1.2
 quarter_car (motor_position + spring_at), gear_train (gear + effort), cardan_joint (universal).
 
 lmscript pitfalls met while writing them:
-- no sin/cos/atan outside `_dsl_` blocks: the pose bridge carries `pose_sincos`; four_bar_linkage has `atan2s`;
+- no sin/cos/atan outside `_lmcode_` blocks: the pose bridge carries `pose_sincos`; four_bar_linkage has `atan2s`;
 - `${x}` writes an integral float (0.0) as an int literal, so a float parameter fails to compile; round to whole
   pixels and use `float(${xi})`, or nudge by 1e-6 (1e-7 has no literal form);
 - CSV values from csv_parse may be strings (exponent form): wrap with `num()`;

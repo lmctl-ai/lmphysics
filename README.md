@@ -117,7 +117,7 @@ Every picture is made by the script named under it: it runs the simulation with 
 **Quick start:** `npm i -g @lmctl-ai/lmctl`, then paste any `lmctl autorun` line above into a terminal; it downloads lmphysics and the drawing host and writes the picture to `images/`. The gear train, Cardan joint, quarter-car, damper sweep and baseball-drag pictures use API added in v0.1.2 (`gear`, `universal`, linear motors, `spring_at`, `Body.drag`).
 Linux downloads require **dynamic glibc >= 2.35** (Ubuntu 22.04 or newer).
 
-It is a scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html) `_dsl_` block and run it. No Python, data files or third-party shared libraries are needed. Linux uses dynamic glibc >= 2.35.
+It is a scripting host, not a command-line tool: write an [lmscript](https://lmctl.com/tools/lmscript/skill.html) `_lmcode_` block and run it. No Python, data files or third-party shared libraries are needed. Linux uses dynamic glibc >= 2.35.
 
 ```
 # pendulum.lms
@@ -133,8 +133,8 @@ s.run(5.0);
 phys.assert_close(s.energy() / e0, 1.0, 0.0001);                     # energy is conserved
 s.save_csv("pendulum.csv");
 end _lmcode_
-savedsl(p, "pendulum.dslb");
-system ${dsl_cli(p)} --lmcode pendulum.dslb;
+r = run_lmcode(p);
+require(r.ok, "simulation failed: " + json_stringify(r));
 ```
 
 `lmscript pendulum.lms` finds `lmphysics` on `PATH` or downloads the release binary for your

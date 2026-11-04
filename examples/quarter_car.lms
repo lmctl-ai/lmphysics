@@ -35,10 +35,9 @@ for (k in range(0, 9)) {
   s.save_csv("build/examples/quarter_car_" + str(k) + ".csv");
 }
 end _lmcode_
-savedsl(sim, "build/quarter_car-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/quarter_car-sim.dslb;
-if (r.code != 0) { println(r.stdout); println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
 # Comfort: peak body acceleration (from the recorded velocity). Road holding: peak change of the tyre load
 # from its static value (m_s + m_u) g = 3335 N; a change near -3335 N means the wheel almost leaves the road.
@@ -93,9 +92,8 @@ plot.cmd("plot 'build/examples/quarter_car_sweep.csv' skip 1 using 1:2 with line
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/quarter_car-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/quarter_car-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/quarter_car.png");
 
 # The model, drawn: road, tyre spring, wheel mass, suspension spring and damper, body mass.
@@ -135,9 +133,8 @@ scene.text(545.0, 256.0, 14.0, "the body jolts and the tyre load jumps.", "#9fb3
 scene.text(545.0, 278.0, 14.0, "Cars pick c near 0.3 of critical: about 1500 N s/m.", "#9fb3c8");
 scene.render_png("build/rendered/quarter_car_model.png", 900, 560, 1);
 end _lmcode_
-savedsl(d, "build/quarter_car-model.dslb");
-r = system ${dsl_cli(d)} --lmcode build/quarter_car-model.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(d);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 copy_file("build/rendered/quarter_car_model.png", "images/quarter_car_model.png");
 println("wrote images/quarter_car_model.png");

@@ -35,7 +35,7 @@ fn pose_box_obj(row, name, sx, sy, sz, path) {
   out = out + "f 1 4 3\nf 1 3 2\nf 5 6 7\nf 5 7 8\nf 1 2 6\nf 1 6 5\nf 2 3 7\nf 2 7 6\nf 3 4 8\nf 3 8 7\nf 4 1 5\nf 4 5 8\n";
   write_file(path, out);
 }
-# lmscript has no sin/cos outside _dsl_ blocks: Taylor series after reduction to [-pi, pi] (error < 1e-15).
+# lmscript has no sin/cos outside _lmcode_ blocks: Taylor series after reduction to [-pi, pi] (error < 1e-15).
 fn pose_sincos(a) {
   let pi2 = 6.283185307179586;
   a = a - pi2 * floor(a / pi2 + 0.5);

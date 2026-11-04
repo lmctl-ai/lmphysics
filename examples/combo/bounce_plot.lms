@@ -11,9 +11,8 @@ s.record("ball", "x,z");
 s.run(4.0);
 s.save_csv("build/examples/bounce.csv");
 end _lmcode_
-savedsl(sim, "build/bounce-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/bounce-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/bounce.png", 900, 500);
@@ -26,7 +25,6 @@ plot.cmd("unset key");
 plot.cmd("plot 'build/examples/bounce.csv' using 2:3 with lines lw 2 lc rgb '#1f77b4'");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/bounce-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/bounce-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/bounce.png");

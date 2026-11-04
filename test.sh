@@ -30,6 +30,55 @@ command -v ninja >/dev/null 2>&1 && GEN="-G Ninja"
 cmake -S . -B "$BUILD_DIR" $GEN -DCMAKE_BUILD_TYPE=Release >/dev/null
 cmake --build "$BUILD_DIR" >"$WORK/build.log" 2>&1 || { tail -40 "$WORK/build.log" >&2; fail "build"; }
 ok "build"
+# A shim named lmphysics, first on PATH, execs the build under test: cli="lmphysics" and explicit
+# ["lmphysics", "--lmcode", "$DSLFILE"] commands bind to it. For each --lmcode call it records the
+# host's own exit code and keeps a copy of every private program file (the bytecode header checks and
+# the budget checks, whose limits must apply to the host and not to node, use those files directly).
+SHIM="$(cd "$BUILD_DIR" && pwd)/test-shim"; rm -rf "$SHIM"; mkdir -p "$SHIM/runs"
+HOST_ABS="$(cd "$BUILD_DIR" && pwd)/$(basename "$HOST")"
+case "$UNAME_S" in
+  MINGW*|MSYS*|CYGWIN*)
+    # Windows spawns the host without a shell, so the shim must be a real executable.
+    SHIM_W="$(cd "$SHIM" && pwd -W)"; HOST_W="$(cd "$BUILD_DIR" && pwd -W)/$(basename "$HOST")"
+    "${CXX:-g++}" -std=c++17 -O1 -DHOST_PATH="\"$HOST_W\"" -DSHIM_DIR="\"$SHIM_W\"" -o "$SHIM/lmphysics.exe" tests/shim.cpp || fail "build Windows test shim";;
+  *)
+    cat >"$SHIM/lmphysics" <<EOF2
+#!/bin/sh
+[ "\${1:-}" = --lmcode ] || exec "$HOST_ABS" "\$@"
+tag="\$(mktemp -d "$SHIM/runs/run.XXXXXX")"
+i=0
+for a in "\$@"; do case "\$a" in --*) ;; *) cp "\$a" "\$tag/p\$i"; i=\$((i+1));; esac; done
+"$HOST_ABS" "\$@"; c=\$?
+echo "\$c" > "\$tag/code"; echo "\$tag" > "$SHIM/last"; exit "\$c"
+EOF2
+    chmod +x "$SHIM/lmphysics";;
+esac
+export PATH="$SHIM:$PATH"
+# run_lms FILE [lmscript flags]: run a file; its stdout (the envelope it prints) goes to stdout. Returns the
+# host's exit code from its last --lmcode call; 125 when no host ran (the file did not compile).
+run_lms() {
+  local file="$1"; shift
+  rm -f "$SHIM/last"
+  "$LMSCRIPT" "$@" "$file" || true
+  [ -f "$SHIM/last" ] || return 125
+  LAST_RUN="$(cat "$SHIM/last")"
+  return "$(cat "$LAST_RUN/code")"
+}
+# capture NAME: load $WORK/NAME.lms in a dry invocation (nothing runs); $WORK/NAME.prog is its program file.
+capture() {
+  rm -f "$SHIM/last"
+  "$LMSCRIPT" --dry-run "$WORK/$1.lms" >/dev/null 2>"$WORK/$1.cerr" || { cat "$WORK/$1.cerr" >&2; fail "$1 compile"; }
+  [ -f "$SHIM/last" ] || fail "$1 did not reach the host"
+  cp "$(cat "$SHIM/last")/p0" "$WORK/$1.prog"
+}
+check_v6() { # program file: bytecode v6 for the raw host schema bytes
+  python3 - "$1" schema/lmphysics.dsl.json <<'PYV6'
+import hashlib,pathlib,sys
+b=pathlib.Path(sys.argv[1]).read_bytes()
+assert b[:6] == b'DSLB\x00\x06', 'not bytecode v6'
+assert b[6:38] == hashlib.sha256(pathlib.Path(sys.argv[2]).read_bytes()).digest(), 'schema hash differs from the raw host schema bytes'
+PYV6
+}
 python3 tests/check-host-flags.py schema/lmphysics.dsl.json "$HOST" || fail "hard host flag cutover"
 
 want_version="lmphysics $(sed -n 's/^project(lmphysics VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
@@ -42,7 +91,9 @@ cmp -s "$WORK/schema.json" schema/lmphysics.dsl.json || fail "embedded schema di
 ok "--lmcode-schema --json prints byte-identical embedded schema bytes"
 diff -u <("$LMSCRIPT" --lmcode-signatures schema/lmphysics.dsl.json) <("$HOST" --lmcode-signatures) || fail "host/compiler signatures differ"
 ok "host registry matches compiler signatures"
-"$HOST" --notices | grep -q "Project Chrono" || fail "--notices missing third-party text"
+# Through a file: grep -q stops reading at its match, and under pipefail the host's SIGPIPE would fail the check.
+"$HOST" --notices >"$WORK/notices.txt" || fail "--notices print"
+grep -q "Project Chrono" "$WORK/notices.txt" || fail "--notices missing third-party text"
 cmp -s <("$HOST" --notices) THIRD_PARTY_NOTICES || fail "--notices differs from THIRD_PARTY_NOTICES"
 ok "--notices prints the third-party license texts"
 
@@ -62,14 +113,14 @@ case "$UNAME_S" in
   *) ok "static-link check skipped on $UNAME_S";;
 esac
 
-# Programs under tests/: compile to bytecode and run (they assert their own numbers).
+# Programs under tests/ run themselves (they assert their own numbers).
 mkdir -p build
 n=0
 for src in tests/*.lms; do
   name="$(basename "$src" .lms)"
-  "$LMSCRIPT" "$src" "build/$name.dslb" >"$WORK/$name.log" 2>&1 || { cat "$WORK/$name.log" >&2; fail "$name compile"; }
-  "$HOST" --lmcode "build/$name.dslb" >"$WORK/$name.out" 2>"$WORK/$name.err" || { cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run"; }
-  grep -q '"ok": true' "$WORK/$name.out" || { cat "$WORK/$name.out" >&2; fail "$name did not report ok"; }
+  run_lms "$src" >"$WORK/$name.out" 2>"$WORK/$name.err" || { code=$?; cat "$WORK/$name.out" "$WORK/$name.err" >&2; fail "$name run (host exit $code)"; }
+  grep -q '"ok":true' "$WORK/$name.out" || { cat "$WORK/$name.out" >&2; fail "$name did not report ok"; }
+  check_v6 "$LAST_RUN/p0" || fail "$name is not bytecode v6 for the host schema"
   n=$((n+1))
 done
 ok "$n test programs compile as bytecode v6, run and pass their own assertions"
@@ -108,8 +159,10 @@ done
 ok "README gallery: $gal images exist and are valid, linked examples exist"
 
 # Examples are self-contained: each runs its own simulation, draws with lmplot and writes images/ and
-# build/ under the current directory. They need lmplot (on PATH or installable), so skip loudly without it.
-if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; then
+# build/ under the current directory. They need a compatible lmplot already on PATH (one that answers
+# --lmcode-schema): a release that still speaks the retired protocol is not a usable renderer, and an
+# auto-install would fetch exactly that. Skip loudly without it.
+if command -v lmplot >/dev/null 2>&1 && lmplot --lmcode-schema --json >/dev/null 2>&1; then
   EXDIR="$WORK/exrun"; mkdir -p "$EXDIR"
   n=0
   for src in examples/*.lms examples/combo/*.lms; do
@@ -132,20 +185,21 @@ if command -v lmplot >/dev/null 2>&1 || [ "${LMPHYSICS_TEST_NETWORK:-}" = 1 ]; t
   cmp -s "$WORK/before.txt" "$WORK/after.txt" || fail "result files differ on rerun"
   ok "all $(wc -l <"$WORK/after.txt" | tr -d ' ') result files are byte-identical on rerun"
 else
-  echo "SKIPPED: examples (no lmplot on PATH and LMPHYSICS_TEST_NETWORK unset): images were not regenerated"
-  ok "examples skipped loudly (no lmplot, LMPHYSICS_TEST_NETWORK unset)"
+  echo "SKIPPED: examples (no compatible lmplot on PATH): images were not regenerated"
+  ok "examples skipped loudly (no compatible lmplot on PATH)"
 fi
 
 # Error paths: each snippet must fail the run with exit 3 and a message naming the problem.
 expect_error() { # name, snippet, expected message fragment
   cat >"$WORK/$1.lms" <<LMS
-p = _dsl_ cli="lmphysics";
+p = _lmcode_ cli="lmphysics";
 $2
-end _dsl_
-savedsl(p, "$WORK/$1.dslb");
+end _lmcode_
+r = run_lmcode(p);
+println(json_stringify(r));
 LMS
-  "$LMSCRIPT" "$WORK/$1.lms" >/dev/null 2>"$WORK/$1.cerr" || { cat "$WORK/$1.cerr" >&2; fail "$1 compile"; }
-  set +e; out="$("$HOST" --lmcode "$WORK/$1.dslb" 2>/dev/null)"; code=$?; set -e
+  set +e; out="$(run_lms "$WORK/$1.lms" 2>"$WORK/$1.cerr")"; code=$?; set -e
+  [ "$code" != 125 ] || { cat "$WORK/$1.cerr" >&2; fail "$1 compile"; }
   [ "$code" = 3 ] || fail "$1: exit code $code, expected 3 ($out)"
   echo "$out" | grep -q "$3" || fail "$1: message lacks '$3': $out"
 }
@@ -193,7 +247,7 @@ ok "errors stop the program with exit 3 and a clear message (40 cases)"
 
 # Determinism without lmplot: a contact run that records every step gives byte-identical CSV twice.
 cat >"$WORK/det.lms" <<LMS
-p = _dsl_ cli="lmphysics";
+p = _lmcode_ cli="lmphysics";
 let s = phys.system("nsc");
 s.material("r", 0.3, 0.8).timestep(0.001);
 s.floor("floor", "r");
@@ -202,25 +256,25 @@ let c = s.box("c", 0.2, 0.3, 0.1, 300.0).pos(0.3, 0.0, 0.5).rot_axis(1.0, 1.0, 0
 s.record("b", "x,y,z,vx,vy,vz,wx,wy,wz").record("c", "x,y,z,qw,qx,qy,qz");
 s.run(2.0);
 s.save_csv("$WORK/det.csv");
-end _dsl_
-savedsl(p, "$WORK/det.dslb");
+end _lmcode_
+r = run_lmcode(p);
+println(json_stringify(r));
 LMS
-"$LMSCRIPT" "$WORK/det.lms" >/dev/null || fail "determinism program compile"
-"$HOST" --lmcode "$WORK/det.dslb" >/dev/null 2>&1 || fail "determinism run 1"
+run_lms "$WORK/det.lms" >/dev/null 2>&1 || fail "determinism run 1"
 mv "$WORK/det.csv" "$WORK/det1.csv"
-"$HOST" --lmcode "$WORK/det.dslb" >/dev/null 2>&1 || fail "determinism run 2"
+run_lms "$WORK/det.lms" >/dev/null 2>&1 || fail "determinism run 2"
 mv "$WORK/det.csv" "$WORK/det2.csv"
 [ "$(wc -l <"$WORK/det1.csv" | tr -d ' ')" = 2002 ] || fail "determinism CSV has $(wc -l <"$WORK/det1.csv") lines, expected 2002"
 cmp -s "$WORK/det1.csv" "$WORK/det2.csv" || fail "contact CSV differs between two identical runs"
 ok "a recorded contact run is byte-identical on rerun"
 
-# Memory budget: a runaway loop stops with a run error (exit 3, message on stderr and in the JSON line)
+# Memory budget: a runaway loop stops with a run error (exit 3, message on stderr and in the result frame)
 # instead of exhausting the machine. The fastest runaway here is the step recording (2048 columns, so
 # 16 KiB per step): a small budget everywhere; on Linux also the default 4096 MiB under a 6 GiB
 # address-space limit (ulimit only here, never in the host; ~30 s). Then a budget that the bodies fit
 # in but the first contact step does not: the failure inside Chrono/Bullet reaches the step's error.
 cat >"$WORK/runaway.lms" <<LMS
-p = _dsl_ cli="lmphysics";
+p = _lmcode_ cli="lmphysics";
 let s = phys.system("nsc");
 s.gravity(0.0, 0.0, 0.0);
 let a = s.sphere("a", 0.1, 1.0);
@@ -228,37 +282,39 @@ let cols = "x";
 for (i in range(0, 11)) { cols = cols + "," + cols; }
 s.record("a", cols);
 while (true) { s.run(s.time() + 1.0); }
-end _dsl_
-savedsl(p, "$WORK/runaway.dslb");
+end _lmcode_
+r = run_lmcode(p);
+println(json_stringify(r));
 LMS
-"$LMSCRIPT" "$WORK/runaway.lms" >/dev/null || fail "runaway.lms compile"
-set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=64 "$HOST" --lmcode "$WORK/runaway.dslb" 2>"$WORK/runaway.err")"; code=$?; set -e
+capture runaway
+set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=64 "$HOST" --lmcode "$WORK/runaway.prog" 2>"$WORK/runaway.err")"; code=$?; set -e
 [ "$code" = 3 ] || fail "runaway loop under LMPHYSICS_MAX_MEMORY_MB=64: exit $code, expected 3 ($out)"
 echo "$out" | grep -q "memory budget exceeded" || fail "runaway loop: JSON lacks the budget message: $out"
 grep -q "LMPHYSICS_MAX_MEMORY_MB" "$WORK/runaway.err" || fail "runaway loop: no budget message on stderr"
-set +e; LMPHYSICS_MAX_MEMORY_MB=-5 "$HOST" --lmcode "$WORK/runaway.dslb" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
+set +e; LMPHYSICS_MAX_MEMORY_MB=-5 "$HOST" --lmcode "$WORK/runaway.prog" >/dev/null 2>"$WORK/badenv.err"; code=$?; set -e
 [ "$code" = 2 ] && grep -q "positive whole number" "$WORK/badenv.err" || fail "bad LMPHYSICS_MAX_MEMORY_MB: exit $code"
 cat >"$WORK/stepmem.lms" <<LMS
-p = _dsl_ cli="lmphysics";
+p = _lmcode_ cli="lmphysics";
 let s = phys.system("nsc");
 s.floor("f", "default");
 for (i in range(0, 20000)) { let b = s.sphere("b" + str(i), 0.1, 1.0).pos(float(i % 1000) * 0.3, float(i / 1000) * 0.3, 0.09).collide("default"); }
 s.step();
-end _dsl_
-savedsl(p, "$WORK/stepmem.dslb");
+end _lmcode_
+r = run_lmcode(p);
+println(json_stringify(r));
 LMS
-"$LMSCRIPT" "$WORK/stepmem.lms" >/dev/null || fail "stepmem.lms compile"
-set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=50 "$HOST" --lmcode "$WORK/stepmem.dslb" 2>/dev/null)"; code=$?; set -e
+capture stepmem
+set +e; out="$(LMPHYSICS_MAX_MEMORY_MB=50 "$HOST" --lmcode "$WORK/stepmem.prog" 2>/dev/null)"; code=$?; set -e
 [ "$code" = 3 ] && echo "$out" | grep -q "step failed at t = 0: memory budget exceeded" || fail "budget exceeded inside a contact step: exit $code ($out)"
 if [ "$UNAME_S" = Linux ]; then
-  set +e; out="$(ulimit -v 6291456; "$HOST" --lmcode "$WORK/runaway.dslb" 2>/dev/null)"; code=$?; set -e
+  set +e; out="$(ulimit -v 6291456; "$HOST" --lmcode "$WORK/runaway.prog" 2>/dev/null)"; code=$?; set -e
   [ "$code" = 3 ] && echo "$out" | grep -q "limit 4096 MiB" || fail "runaway loop with the default budget under ulimit -v 6 GiB: exit $code ($out)"
   ok "memory budget: runaway recording stops at 64 MiB and at the default 4096 MiB (under ulimit -v 6 GiB); a step past it is a step error"
 else
   ok "memory budget: runaway recording stops at LMPHYSICS_MAX_MEMORY_MB=64, a step past it is a step error (default-budget run is Linux-only)"
 fi
 
-set +e; "$HOST" --lmcode "$WORK/does-not-exist.dslb" >/dev/null 2>&1; code=$?; set -e
+set +e; "$HOST" --lmcode "$WORK/does-not-exist.bin" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 3 ] || fail "missing bytecode exit code $code, expected 3"
 set +e; "$HOST" >/dev/null 2>&1; code=$?; set -e
 [ "$code" = 2 ] || fail "usage exit code $code, expected 2"
@@ -274,11 +330,10 @@ w=pathlib.Path(sys.argv[1])
 read=lambda name:set((w/name).read_text().splitlines())
 assert read('std-registry.sig')-read('std-builtins.sig') == read('std-host-only.sig'), 'host-only registry drift'
 schema=str(pathlib.Path('schema/lmphysics.dsl.json').resolve()).replace('\\','/')
-out=str(w/'std-probe.dslb').replace('\\','/')
-(w/'std-probe.lms').write_text('p = _lmcode_ schema='+json.dumps(schema)+';\nlet values = str_list().add("abc");\nif (str_len(values.at(0)) != 3) { let bad = int_list().at(0); }\nend _lmcode_\nsavedsl(p, '+json.dumps(out)+');\n')
+(w/'std-probe.lms').write_text('p = _lmcode_ schema='+json.dumps(schema)+';\nlet values = str_list().add("abc");\nif (str_len(values.at(0)) != 3) { let bad = int_list().at(0); }\nend _lmcode_\nr = run_lmcode(p, {command: ["lmphysics", "--lmcode", "$DSLFILE"]});\nprintln(json_stringify(r));\n')
 PYSTD
-"$LMSCRIPT" "$WORK/std-probe.lms" > "$WORK/std-probe.log" 2>&1 || { cat "$WORK/std-probe.log"; fail "implicit std compile"; }
-"$HOST" --lmcode "$WORK/std-probe.dslb" > "$WORK/std-run.log" 2>&1 || { cat "$WORK/std-run.log"; fail "implicit std runtime"; }
+run_lms "$WORK/std-probe.lms" > "$WORK/std-run.log" 2>&1 || { code=$?; cat "$WORK/std-run.log"; [ "$code" = 125 ] && fail "implicit std compile"; fail "implicit std runtime"; }
+grep -q '"ok":true' "$WORK/std-run.log" || fail "implicit std envelope: $(cat "$WORK/std-run.log")"
 ok "host-only signatures and implicit std runtime"
 
 echo "all $pass checks passed"

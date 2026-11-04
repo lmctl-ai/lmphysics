@@ -29,9 +29,8 @@ h.record("bob", "z,vx,vz,wy");
 h.run(10.0);
 h.save_csv("build/examples/drift_hht.csv");
 end _lmcode_
-savedsl(sim, "build/viz_energy_drift-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/viz_energy_drift-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/energy_drift.png", 900, 520);
@@ -47,7 +46,6 @@ plot.cmd("e0 = en(0,0,0,-0.5)");
 plot.cmd("plot 'build/examples/drift_euler.csv' skip 1 using 1:((en($3,$4,$5,$2)-e0)/(m*g)) with lines lw 2 lc rgb '#d62728' title 'implicit Euler (default)', 'build/examples/drift_trapezoidal.csv' skip 1 using 1:((en($3,$4,$5,$2)-e0)/(m*g)) with lines lw 2 lc rgb '#ff7f0e' title 'trapezoidal', 'build/examples/drift_hht.csv' skip 1 using 1:((en($3,$4,$5,$2)-e0)/(m*g)) with lines lw 2 lc rgb '#1f77b4' title 'HHT (direct solver)'");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/viz_energy_drift-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/viz_energy_drift-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/energy_drift.png");

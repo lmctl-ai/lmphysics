@@ -32,9 +32,8 @@ b.run(15.0);
 phys.assert_close(b.energy() / eb, 1.0, 0.001);
 b.save_csv("build/examples/dpend_b.csv");
 end _lmcode_
-savedsl(sim, "build/viz_double_pendulum-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/viz_double_pendulum-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
 # Tip separation of the two runs, one line per 25 ms: "t distance".
 ra = csv_parse(read_file("build/examples/dpend_a.csv"));
@@ -76,7 +75,6 @@ plot.cmd("plot 'build/examples/dpend_sep.txt' using 1:2 with lines lw 2 lc rgb '
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/viz_double_pendulum-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/viz_double_pendulum-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/double_pendulum.png");

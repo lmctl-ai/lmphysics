@@ -1,0 +1,11 @@
+# Invocation envelope and run_lmcode (2026-11-04)
+
+The current compiler has no savedsl, _dsl_, dsl_cli or CLI bytecode files. A script runs a block with r = run_lmcode(p): lmscript compiles it into a private program file, starts lmphysics --lmcode FILE and reads one terminal frame back. r is that envelope (r.ok, r.result, or r.phase, r.code, r.message). Host stdout is not returned: phys.print output goes to lmscript's stdout, so a sweep that feeds a plot writes its table with file_write inside the block.
+
+Host side (cpp/main.cpp): the SDK is synced through scripts/sync-sdk.sh (lmcode-cpp 93bddf1, pinned in sdk.lock). --lmcode builds one InvocationResults. Every file loads before any program runs; each slot is selected, run and completed in order; the first failure stops the run; write_frame prints the single frame. Exit codes: 0 success; 2 cli (usage, a bad LMPHYSICS_MAX_MEMORY_MB, invalid invocation metadata; a failure frame is printed and the usage text still goes to stderr); 3 load or run, including the memory budget; 4 application (APP_FAIL) or output failure.
+
+Memory budget: a failure frame must still be built when the budget is exhausted, and the simulation stays allocated. main() holds a 1 MiB reserve and releases it before recording any failure, so an Exceeded cannot escape the catch handler.
+
+Dry mode: run_lmcode under lmscript --dry-run sends dry:true invocation metadata. A simulation has no effect-free mode and programs write files, so a dry invocation loads and validates every program but runs none. The standalone --dry-run flag requests the same mode when no metadata is present and is a cli error against real-mode metadata. Before the envelope the flag was accepted and ignored.
+
+Tests: test.sh puts a shim named lmphysics first on PATH (tests/shim.cpp on Windows). It execs the build under test, records the host exit code of each --lmcode call and keeps a copy of each program file. tests/ programs, the error cases, determinism and the std probe run through lmscript. The memory-budget checks call the host directly on a program captured from a dry invocation, because ulimit -v must apply to the host and not to node. The v6 header and raw schema hash checks moved here from select-compiler.sh, since the compiler no longer writes files.

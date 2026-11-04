@@ -18,9 +18,8 @@ w.run(1.4);
 phys.assert_close(blk.vx() * cos(th) - blk.vz() * sin(th), 9.81 * (sin(th) - 0.3 * cos(th)) * 1.4, 0.05);
 w.save_csv("build/examples/incline_forces.csv");
 end _lmcode_
-savedsl(sim, "build/viz_incline_forces-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/viz_incline_forces-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
 rows = csv_parse(read_file("build/examples/incline_forces.csv"));
 r1 = rows.get(200, null);
@@ -88,9 +87,8 @@ scene.text(56.0, 612.0, 13.0, ${t6}, "#9fb3c8");
 scene.text(140.0, 508.0, 16.0, "30 deg", "#9fb3c8");
 scene.render_png("build/rendered/incline_forces.png", 900, 650, 1);
 end _lmcode_
-savedsl(d, "build/viz_incline_forces-draw.dslb");
-r = system ${dsl_cli(d)} --lmcode build/viz_incline_forces-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(d);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 copy_file("build/rendered/incline_forces.png", "images/incline_forces.png");
 println("wrote images/incline_forces.png");

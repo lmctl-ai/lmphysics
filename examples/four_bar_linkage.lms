@@ -9,7 +9,7 @@ import "https://raw.githubusercontent.com/lmctl-ai/lmphysics/942b0a17e15bbf7f536
 mkdir("build/examples");
 mkdir("build/rendered");
 mkdir("images");
-# lmscript has no atan outside _dsl_ blocks: atan2 from two argument halvings and a short series.
+# lmscript has no atan outside _lmcode_ blocks: atan2 from two argument halvings and a short series.
 fn atan2s(y, x) {
   let pi = 3.141592653589793;
   if (x == 0.0) { if (y > 0.0) { return pi / 2.0; } return -pi / 2.0; }
@@ -53,10 +53,9 @@ s.record("crank", "x,y,z,qw,qx,qy,qz").record("coupler", "x,y,z,qw,qx,qy,qz").re
 s.run(1.0);
 s.save_csv("build/examples/four_bar.csv");
 end _lmcode_
-savedsl(sim, "build/four_bar_linkage-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/four_bar_linkage-sim.dslb;
-if (r.code != 0) { println(r.stdout); println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
 rows = csv_parse(read_file("build/examples/four_bar.csv"));
 # Pixels: 900 per metre, O2 at (230, 420), z up.
@@ -118,9 +117,8 @@ scene.text(40.0, 540.0, 14.0, ${lim}, "#e6edf3");
 scene.text(40.0, 562.0, 13.0, "The joints close the loop in every recorded step to 1 mm (trapezoidal integrator, PSOR).", "#9fb3c8");
 scene.render_png("build/rendered/four_bar_linkage.png", 900, 600, 1);
 end _lmcode_
-savedsl(d, "build/four_bar_linkage-draw.dslb");
-r = system ${dsl_cli(d)} --lmcode build/four_bar_linkage-draw.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(d);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 copy_file("build/rendered/four_bar_linkage.png", "images/four_bar_linkage.png");
 println("wrote images/four_bar_linkage.png");

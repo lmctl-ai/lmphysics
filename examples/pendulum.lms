@@ -1,6 +1,5 @@
 # A 60 degree pendulum released from rest, recorded every 5 ms. The pin is a revolute joint, the
 # integrator is trapezoidal; total energy must stay constant and the reaction at the pin is logged.
-out = ARGV.len() > 0 ? ARGV[0] : "build/pendulum.dslb";
 mkdir("build/examples");
 mkdir("images");
 p = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
@@ -16,9 +15,8 @@ phys.assert_close(s.energy() / e0, 1.0, 0.0001);
 phys.assert_close(bob.x() * bob.x() + bob.z() * bob.z(), 1.0, 0.001);
 s.save_csv("build/examples/pendulum.csv");
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/pendulum.png", 900, 520);
@@ -34,7 +32,6 @@ plot.cmd("set key top right box opaque");
 plot.cmd("plot 'build/examples/pendulum.csv' skip 1 using 1:6 with lines lw 2 lc rgb '#1f77b4' title 'angle (left)', 'build/examples/pendulum.csv' skip 1 using 1:8 axes x1y2 with lines lw 2 lc rgb '#d62728' title 'pin force fz (right)'");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/pendulum-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/pendulum-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/pendulum.png");

@@ -6,6 +6,7 @@
 mkdir("build/examples");
 mkdir("images");
 sim = _lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest";
+let table = "";
 for (k in range(0, 49)) {
   let w = 4.0 + 0.25 * float(k);
   let s = phys.system("nsc");
@@ -24,7 +25,7 @@ for (k in range(0, 49)) {
   }
   let theory = 10.0 / sqrt((100.0 - w * w) * (100.0 - w * w) + 16.0 * w * w);
   phys.assert_close(amp, theory, 0.02 * theory + 0.002);
-  phys.print(str(w) + " " + str(amp) + " " + str(theory));
+  table = table + str(w) + " " + str(amp) + " " + str(theory) + "\n";
 }
 let a = phys.system("nsc");
 a.gravity(0.0, 0.0, 0.0).integrator("trapezoidal").timestep(0.002);
@@ -59,11 +60,10 @@ c.spring("k", wall_c, car_c, 100.0, 4.0, 0.0);
 c.record("car", "x");
 c.run(4.0);
 c.save_csv("build/examples/resonance_w14.csv");
+file_write("build/examples/resonance_curve.txt", table);
 end _lmcode_
-savedsl(sim, "build/viz_resonance-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/viz_resonance-sim.dslb;
-assert(r.code == 0);
-write_file("build/examples/resonance_curve.txt", r.stdout);
+r = run_lmcode(sim);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/resonance.png", 1100, 480);
@@ -85,7 +85,6 @@ plot.cmd("plot 'build/examples/resonance_w6.csv' skip 1 using 1:2 with lines lw 
 plot.cmd("unset multiplot");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/viz_resonance-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/viz_resonance-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/resonance.png");

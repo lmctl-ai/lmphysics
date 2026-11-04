@@ -10,14 +10,15 @@
 - `08-open-items.md` — what is not done.
 - `09-resource-limits.md` — the total memory budget (`LMPHYSICS_MAX_MEMORY_MB`) and how it is counted.
 - `10-linux-glibc.md` — dynamic system-glibc baseline, static dependency policy and release verification.
+- `11-invocation-envelope.md` — `run_lmcode`, the one-envelope host reply (exit 2/3/4, dry metadata, budget reserve) and the test.sh shim.
 - `pose-render-bridge.md` — integration between physical simulation bodies and visual renderers (lmcad, lmdraw).
 
 ## Adding an example or function
-- **New example**: Add `examples/<name>.lms` using `_dsl_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest"`. Output plots or CSVs to `images/` or stdout. Add golden checks in `test.sh` and update `README.md` gallery with `<img src="...">` and `lmctl autorun <raw .lms URL>` caption.
+- **New example**: Add `examples/<name>.lms` using `_lmcode_ cli="lmphysics" install="github:lmctl-ai/lmphysics@latest"` and `r = run_lmcode(p); assert(r.ok);`. Output plots or CSVs to `images/` or stdout. Add golden checks in `test.sh` and update `README.md` gallery with `<img src="...">` and `lmctl autorun <raw .lms URL>` caption.
 - **New host function**: Declare in `schema/lmphysics.dsl.json`, register in `src/registry.cpp` via `dslvm::Registry`, and verify `test.sh` passes (`--lmcode-schema` and `--lmcode-signatures` match compiler output).
 
 ## Releases
 Releases are cut automatically on push to `main` when CI workflows pass all platforms.
 
 
-Compiler >=0.2.420 resolves std from the pinned SDK bundle by default; host schema bytes remain host-only, with full and `--without-std` parity plus a standard-only runtime probe in `test.sh`.
+Compiler 0.2.454+ (run_lmcode) resolves std from the pinned SDK bundle by default; host schema bytes remain host-only, with full and `--without-std` parity plus a standard-only runtime probe in `test.sh`.

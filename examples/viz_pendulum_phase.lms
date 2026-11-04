@@ -37,9 +37,8 @@ a4.record("bob", "x,z,wy");
 a4.run(14.0);
 a4.save_csv("build/examples/phase_a4.csv");
 end _lmcode_
-savedsl(sim, "build/viz_pendulum_phase-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/viz_pendulum_phase-sim.dslb;
-assert(r.code == 0);
+r = run_lmcode(sim);
+assert(r.ok);
 
 draw = _lmcode_ cli="lmplot" install="github:lmctl-ai/lmplot@latest";
 plot.png("images/pendulum_phase.png", 900, 560);
@@ -54,7 +53,6 @@ plot.cmd("set key outside right center");
 plot.cmd("plot 'build/examples/phase_a1.csv' skip 1 using (atan2($2,-$3)):(-$4) with lines lw 2 lc rgb '#1f77b4' title 'released at 0.4 rad', 'build/examples/phase_a2.csv' skip 1 using (atan2($2,-$3)):(-$4) with lines lw 2 lc rgb '#2ca02c' title 'released at 1.2 rad', 'build/examples/phase_a3.csv' skip 1 using (atan2($2,-$3)):(-$4) with lines lw 2 lc rgb '#ff7f0e' title 'released at 2.2 rad', 'build/examples/phase_a4.csv' skip 1 using (atan2($2,-$3)):(-$4) with lines lw 2 lc rgb '#d62728' title 'released at 3.0 rad'");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/viz_pendulum_phase-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/viz_pendulum_phase-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/pendulum_phase.png");

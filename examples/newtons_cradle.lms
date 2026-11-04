@@ -26,10 +26,9 @@ let e0 = s.energy();
 s.run(6.0);
 s.save_csv("build/examples/newtons_cradle.csv");
 end _lmcode_
-savedsl(sim, "build/newtons_cradle-sim.dslb");
-r = system ${dsl_cli(sim)} --lmcode build/newtons_cradle-sim.dslb;
-if (r.code != 0) { println(r.stdout); println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(sim);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 
 # First apex of the right ball: its velocity changes sign after the first impact.
 rows = csv_parse(read_file("build/examples/newtons_cradle.csv"));
@@ -62,9 +61,8 @@ plot.cmd("set yrange [-150:200]");
 plot.cmd("plot 'build/examples/newtons_cradle.csv' skip 1 using 1:(1000*($2+0.101)) with lines lw 2 lc rgb '#d62728' title 'ball 1 (released)', '' skip 1 using 1:(1000*$8) with lines lw 3 lc rgb '#2ca02c' title 'balls 2, 3, 4 (overlapping: they drift together)', '' skip 1 using 1:(1000*($14-0.101)) with lines lw 2 lc rgb '#1f77b4' title 'ball 5'");
 plot.close();
 end _lmcode_
-savedsl(draw, "build/newtons_cradle-draw.dslb");
-r = system ${dsl_cli(draw)} --lmcode build/newtons_cradle-draw.dslb;
-assert(r.code == 0);
+r = run_lmcode(draw);
+assert(r.ok);
 println("wrote images/newtons_cradle.png");
 
 render = _lmcode_ cli="lmblender" install="github:lmctl-ai/lmblender@latest";
@@ -104,9 +102,7 @@ scene.set_view_transform("AgX");
 scene.render_settings(6, 17, true);
 scene.render_png("images/newtons_cradle_render.png", 48, 900, 600);
 end _lmcode_
-savedsl(render, "build/newtons_cradle-render.dslb");
-argv = dsl_cli(render); push(argv, "--lmcode"); push(argv, "build/newtons_cradle-render.dslb");
-r = system(argv, 300000);
-if (r.code != 0) { println(r.stdout); println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(render);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/newtons_cradle_render.png");
