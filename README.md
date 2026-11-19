@@ -6,6 +6,13 @@
 [![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmphysics?label=release)](https://github.com/lmctl-ai/lmphysics/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+## Documentation
+
+- [Quick reference](https://www.lmctl.com/tools/lmphysics/)
+- [LLM skill](https://www.lmctl.com/tools/lmphysics/skill.html)
+- [Guide](https://www.lmctl.com/tools/lmphysics/guide.html)
+- [Reference](https://www.lmctl.com/tools/lmphysics/reference.html)
+
 ### Stacks, collisions and contact
 
 | ![harmonic_overhang](docs/images/harmonic_overhang.png) | ![wrecking_ball](docs/images/wrecking_ball.png) |
